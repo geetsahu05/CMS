@@ -128,7 +128,10 @@
                                 
                                 <h3 class="text-lg font-semibold text-gray-700">Room ${room.room_Number}</h3>
                                 <p class="text-sm text-gray-600">Status: ${room.booking_status}</p>
-                                <p class="text-sm text-gray-600">By: ${room.Booked_by?.userEmail || "N/A"}</p>
+                                <p class="text-sm text-gray-600">
+                                    By: ${room.Booked_by?.userEmail || "N/A"} 
+                                    <span class="ml-4">Role: ${room.Booked_by.userType}</span>
+                                </p>
 
                                 <p class="text-sm text-gray-600">Branch: ${room.branch}</p>
                                 <p class="text-sm text-gray-600">Batch: ${room.batch}</p>

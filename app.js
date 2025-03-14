@@ -304,30 +304,19 @@ app.get("/adminDash", admin_authMiddleware , async (req, res) => { //testing poi
     }
 });
 
-app.get("/Teacher_dashboard" , teacher_authMiddleware , async (req , res) => {
+app.get("/Teacher_dashboard", teacher_authMiddleware, async (req, res) => {
 
     try {
-        if (!req.user) {
-            return res.redirect('/teacher_log');
-        }
 
-        // Find the admin in the database
-        let teacher = await teacherModel.findOne({ email: req.user.email });
-
-        let bookedRooms = []
-
-        if (!teacher) {
-            return res.redirect('/teacher_log'); // If admin not found, redirect to login
-        }
-
-        res.render('teacherDash', { teacherName: teacher.name, teacherEmail: teacher.email, bookedRooms });
-
+        let currentTeacher = await teacherModel.findOne({email:req.user.email})
+        let buildings = await buildingModel.find();
+        res.render('teacherDash', { buildings , currentTeacher});  // Correctly pass buildings as an object
     } catch (error) {
-        console.error("Error fetching admin dashboard:", error);
-        res.status(500).send("Server Error");
+        console.error("Error fetching buildings:", error);
+        res.status(500).send("Internal Server Error");
     }
 
-})
+});
 
 
 app.get("/add_building" , (req , res) => {
@@ -470,6 +459,39 @@ app.post('/bookRooms', bc_authMiddleware, async (req, res) => {
     }
 });
 
+
+app.post('/TeacherbookRooms', teacher_authMiddleware , async (req, res) => {
+    try {
+        const selectedRooms = JSON.parse(req.body.selectedRooms);
+
+        console.log(selectedRooms)
+
+        // Fetch the current user
+        const currentUser = await teacherModel.findOne({ email: req.user.email });
+        if (!currentUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Update all selected rooms with branch and batch details
+        await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
+            roomModel.findByIdAndUpdate(roomId, {
+                $set: {
+                    "Booked_by.userId": currentUser._id,
+                    "Booked_by.userEmail": currentUser.email,
+                    "Booked_by.userType": "Teacher",
+                    booking_status: "Booked",
+                    branch: branch || "Not Specified",
+                    batch: batch || "Not Specified"
+                }
+            })
+        ));
+
+        res.redirect("Teacher_dashboard");
+    } catch (error) {
+        console.error("Error booking rooms:", error);
+        res.status(500).json({ error: "Error booking rooms" });
+    }
+});
 
 
 app.put("/freeRooms", async (req, res) => {
