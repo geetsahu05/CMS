@@ -50,6 +50,22 @@ const admin_authMiddleware = (req, res, next) => {
     }
 };
 
+const teacher_authMiddleware = (req, res, next) => {
+    const token = req.cookies.Teachertoken;
+
+    if (!token) {
+        return res.status(401).json({ message: "Unauthorized: No token provided" });
+    }
+
+    try {
+        const decoded = jwt.verify(token, "1234");
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({ message: "Forbidden: Invalid token" });
+    }
+};
+
 app.get("/" , (req , res) => {
 
     res.render("landing")
@@ -181,7 +197,6 @@ app.post("/teacher_log", async (req, res) => {
 
         res.cookie("Teachertoken", token); //testing point
 
-        res.send("Done")
         res.redirect("/Teacher_dashboard")
 
     } catch (error) {
@@ -288,6 +303,31 @@ app.get("/adminDash", admin_authMiddleware , async (req, res) => { //testing poi
         res.status(500).send("Server Error");
     }
 });
+
+app.get("/Teacher_dashboard" , teacher_authMiddleware , async (req , res) => {
+
+    try {
+        if (!req.user) {
+            return res.redirect('/teacher_log');
+        }
+
+        // Find the admin in the database
+        let teacher = await teacherModel.findOne({ email: req.user.email });
+
+        let bookedRooms = []
+
+        if (!teacher) {
+            return res.redirect('/teacher_log'); // If admin not found, redirect to login
+        }
+
+        res.render('teacherDash', { teacherName: teacher.name, teacherEmail: teacher.email, bookedRooms });
+
+    } catch (error) {
+        console.error("Error fetching admin dashboard:", error);
+        res.status(500).send("Server Error");
+    }
+
+})
 
 
 app.get("/add_building" , (req , res) => {
