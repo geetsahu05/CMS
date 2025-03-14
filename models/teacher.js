@@ -11,5 +11,5 @@ const teacherSchema = new mongoose.Schema({
 
 })
 
-const teacherModel = mongoose.model('teacher' , BCSchema)
+const teacherModel = mongoose.model('teacher' , teacherSchema)
 module.exports = teacherModel

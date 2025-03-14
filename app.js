@@ -4,8 +4,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser");
 
-const BCModel = require("./models/BC")
 const AdminModel = require("./models/admin")
+const BCModel = require("./models/BC")
+const teacherModel = require("./models/teacher")
 const roomModel = require("./models/room");
 const floorModel = require("./models/floor")
 const buildingModel = require("./models/building");
@@ -121,6 +122,72 @@ app.post("/login_bc", async (req, res) => {
     }
 });
 
+app.get("/register_teacher" , (req , res) => {
+
+    res.render("teacherRegis")
+})
+
+app.post("/register_teacher" , async (req , res) => {
+
+    try {
+
+        let { name , email , password} = req.body
+
+
+        
+        const existingUser = await teacherModel.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = await teacherModel.create({ name, email, password: hashedPassword});
+        
+        res.redirect('/teacher_log')
+
+        
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+})
+
+app.get("/teacher_log" , async ( req , res) => {
+
+    res.render("teacherlog")
+
+})
+
+app.post("/teacher_log", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        const teacher = await teacherModel.findOne({ email });
+        if (!teacher) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
+
+        const isMatch = await bcrypt.compare(password, teacher.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
+
+
+        const token = jwt.sign(
+            { id: teacher._id, email: teacher.email },
+            "1234",
+        );
+
+        res.cookie("Teachertoken", token); //testing point
+
+        res.send("Done")
+        res.redirect("/Teacher_dashboard")
+
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
 
 app.get("/register_admin" , (req , res) => {
 
