@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Building</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-[500px]">
+        <h2 class="text-2xl font-bold text-gray-800 text-center mb-4">Add New Building</h2>
+        
+        <form id="buildingForm" action="/add_building" method="POST" class="space-y-4">
+            <!-- Building Name -->
+            <input type="text" name="buildingName" placeholder="Building Name" 
+                class="w-full p-2 border rounded" required>
+
+            <!-- Number of Floors -->
+            <input type="number" id="numFloors" name="numFloors" placeholder="Number of Floors" 
+                class="w-full p-2 border rounded" required min="1">
+
+            <!-- Dynamic Floors Section -->
+            <div id="floorsContainer" class="mt-4 space-y-4"></div>
+
+            <!-- Submit Button -->
+            <button type="submit" 
+                class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+                Submit
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("numFloors").addEventListener("input", function() {
+            let numFloors = parseInt(this.value);
+            let floorsContainer = document.getElementById("floorsContainer");
+            floorsContainer.innerHTML = ""; // Clear previous fields
+
+            if (numFloors > 0) {
+                for (let i = 1; i <= numFloors; i++) {
+                    let floorDiv = document.createElement("div");
+                    floorDiv.classList.add("p-4", "border", "rounded", "bg-gray-50");
+
+                    floorDiv.innerHTML = `
+                        <h3 class="text-lg font-semibold text-gray-700">Floor ${i}</h3>
+                        <input type="number" name="floors[${i}][totalRooms]" 
+                            placeholder="Total Rooms" class="w-full p-2 border rounded my-1" required min="1">
+                        <input type="number" name="floors[${i}][startRoom]" 
+                            placeholder="Starting Room Number" class="w-full p-2 border rounded my-1" required>
+                        <input type="number" name="floors[${i}][endRoom]" 
+                            placeholder="Ending Room Number" class="w-full p-2 border rounded my-1" required>
+                    `;
+                    floorsContainer.appendChild(floorDiv);
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

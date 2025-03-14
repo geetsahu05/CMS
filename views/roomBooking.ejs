@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Header -->
+    <header class="bg-blue-700 text-white p-4 flex justify-between items-center shadow-md">
+        <h1 class="text-2xl font-bold">Batch Coordinator - Room Booking</h1>
+        
+        <!-- BC Info -->
+        <div class="text-right">
+            <p id="bcName" class="text-lg font-semibold"> <%= currentBC.name %></p>
+            <p id="bcEmail" class="text-sm"> <%= currentBC.email %> </p>
+        </div>
+    </header>
+    <!-- Main Container -->
+    <div class="flex h-screen">
+        <!-- Left Sidebar (Building List) -->
+        <aside class="w-1/4 bg-white shadow-lg p-5 border-r">
+            <h2 class="text-lg font-semibold mb-4">Buildings</h2>
+            <ul class="space-y-3">
+                <% buildings.forEach(building => { %>
+                    <li>
+                        <button id="building-<%= building._id %>" 
+                            onclick="showFloors('<%= building._id %>')" 
+                            class="block w-full text-left bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition">
+                            🏢 <%= building.building_name %>
+                        </button>
+                    </li>
+                <% }); %>
+            </ul>
+        </aside>
+
+        <!-- Right Section (Floors & Rooms) -->
+        <main class="w-3/4 p-6">
+            <!-- Selected Building Title -->
+            <h2 id="selectedBuildingTitle" class="text-xl font-bold text-gray-800 hidden mb-4"></h2>
+
+            <!-- Floors Section -->
+            <div id="floorsSection" class="hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Select Floor</h2>
+                <div id="floorsContainer" class="grid grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Rooms Section -->
+            <div id="roomsSection" class="hidden mt-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Select Rooms</h2>
+                <div id="roomsContainer" class="grid grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Submit Button -->
+            <form id="bookingForm" action="/bookRooms" method="POST" class="mt-6 hidden">
+                <input type="hidden" name="selectedRooms" id="selectedRooms">
+                <button type="submit" class="bg-green-500 text-white p-3 rounded-lg hover:bg-green-600 w-full transition">
+                    ✅ Book Selected Rooms
+                </button>
+            </form>
+
+            <button id="unbookButton" onclick="unbookRooms()" 
+                class="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 w-full mt-4 transition hidden">
+                🚫 Free Selected Rooms
+            </button>
+
+        </main>
+    </div>
+
+    <script>
+        let selectedRooms = [];
+        let selectedBuildingId = null;
+        let selectedFloorId = null;
+
+        // Function to fetch and display floors
+        function showFloors(buildingId) {
+            selectedBuildingId = buildingId;
+
+            // Update UI: Highlight selected building
+            document.querySelectorAll("[id^='building-']").forEach(btn => btn.classList.remove("bg-blue-700"));
+            document.getElementById(`building-${buildingId}`).classList.add("bg-blue-700");
+
+            // Show Building Name
+            const buildingName = document.getElementById(`building-${buildingId}`).innerText;
+            document.getElementById("selectedBuildingTitle").innerText = "🏢 " + buildingName + " - Select a Floor";
+            document.getElementById("selectedBuildingTitle").classList.remove("hidden");
+
+            fetch(`/getFloors/${buildingId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("floorsContainer").innerHTML = "";
+                    data.floors.forEach(floor => {
+                        document.getElementById("floorsContainer").innerHTML += `
+                            <button id="floor-${floor._id}" 
+                                onclick="showRooms('${floor._id}')" 
+                                class="floor-button bg-gray-300 text-black p-4 rounded-lg shadow-md hover:bg-gray-400 w-full transition">
+                                🏢 Floor ${floor.floor_Number}
+                            </button>
+                        `;
+                    });
+                    document.getElementById("floorsSection").classList.remove("hidden");
+                    document.getElementById("roomsSection").classList.add("hidden");
+                    document.getElementById("bookingForm").classList.add("hidden");
+                });
+        }
+
+        // Function to fetch and display rooms
+        function showRooms(floorId) {
+            selectedFloorId = floorId;
+        
+            document.querySelectorAll(".floor-button").forEach(btn => btn.classList.remove("bg-gray-500", "text-white"));
+            document.getElementById(`floor-${floorId}`).classList.add("bg-gray-500", "text-white");
+        
+            fetch(`/getRooms/${floorId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("roomsContainer").innerHTML = "";
+                    data.rooms.forEach(room => {
+                        let isBooked = room.booking_status === "Booked";
+                        let roomColor = isBooked ? "bg-red-200 border-red-500" : "bg-green-200 border-green-500";
+                        
+                        document.getElementById("roomsContainer").innerHTML += `
+                            <div id="room-${room._id}" 
+                                onclick="toggleRoom('${room._id}', ${isBooked})" 
+                                class="room-card ${roomColor} p-4 rounded-lg shadow-md hover:bg-blue-100 cursor-pointer border-2 transition relative">
+                                
+                                <h3 class="text-lg font-semibold text-gray-700">Room ${room.room_Number}</h3>
+                                <p class="text-sm text-gray-600">Status: ${room.booking_status}</p>
+                                <p class="text-sm text-gray-600">By: ${room.Booked_by?.userEmail || "N/A"}</p>
+
+                                <p class="text-sm text-gray-600">Branch: ${room.branch}</p>
+                                <p class="text-sm text-gray-600">Batch: ${room.batch}</p>
+
+
+
+                                
+                                ${
+                                    !isBooked
+                                        ? `
+                                    <div class="mt-3">
+                                        <label class="text-sm font-semibold text-gray-600">Branch:</label>
+                                        <input type="text" id="branch-${room._id}" name="branch-${room._id}" 
+                                            class="w-full p-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300" placeholder="Enter branch">
+                                        
+                                        <label class="text-sm font-semibold text-gray-600 mt-2">Batch:</label>
+                                        <input type="text" id="batch-${room._id}" name="batch-${room._id}" 
+                                            class="w-full p-2 border rounded-md focus:outline-none focus:ring focus:ring-blue-300" placeholder="Enter batch">
+                                    </div>
+                                    `
+                                        : ""
+                                }
+                            </div>
+                        `;
+                    });
+                    document.getElementById("roomsSection").classList.remove("hidden");
+                    document.getElementById("bookingForm").classList.remove("hidden");
+                    document.getElementById("unbookButton").classList.remove("hidden"); // Show Unbook button
+                });
+        }
+        
+        
+
+        // Function to select/deselect rooms
+        function toggleRoom(roomId, isBooked) {
+            const roomElement = document.getElementById(`room-${roomId}`);
+        
+            if (selectedRooms.some(room => room.roomId === roomId)) {
+                selectedRooms = selectedRooms.filter(room => room.roomId !== roomId);
+                roomElement.classList.remove("border-blue-500", "bg-blue-50");
+                roomElement.classList.add(isBooked ? "border-red-500" : "border-gray-300");
+            } else {
+                const branch = document.getElementById(`branch-${roomId}`)?.value || "";
+                const batch = document.getElementById(`batch-${roomId}`)?.value || "";
+                
+                selectedRooms.push({ roomId, branch, batch });
+                roomElement.classList.remove("border-gray-300", "border-red-500");
+                roomElement.classList.add("border-blue-500", "bg-blue-50");
+            }
+        
+            document.getElementById("selectedRooms").value = JSON.stringify(selectedRooms);
+        }
+        
+
+        
+        function unbookRooms() {
+            if (selectedRooms.length === 0) {
+                alert("Please select at least one room to free.");
+                return;
+            }
+        
+            if (!confirm("Are you sure you want to free the selected rooms?")) return;
+        
+            fetch("/freeRooms", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomIds: selectedRooms }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    selectedRooms.forEach(roomId => {
+                        const roomElement = document.getElementById(`room-${roomId}`);
+                        roomElement.classList.remove("bg-red-200", "border-red-500");
+                        roomElement.classList.add("bg-green-200", "border-green-500");
+                        roomElement.querySelector("p").innerText = "Status: Available";
+                    });
+                    selectedRooms = [];
+                    document.getElementById("selectedRooms").value = JSON.stringify(selectedRooms);
+                } else {
+                    alert("Error freeing rooms.");
+                }
+            });
+        }
+        
+        
+    </script>
+
+</body>
+</html>

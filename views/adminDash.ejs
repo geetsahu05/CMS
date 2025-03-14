@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Header -->
+    <header class="bg-blue-700 text-white p-4 flex justify-between items-center shadow-md">
+        <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+        <div class="text-right">
+            <p class="text-sm">Welcome, <span class="font-semibold"><%= admin.name %></span></p>
+            <p class="text-sm">Email: <span class="font-semibold"><%= admin.email %></span></p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex h-screen">
+        <!-- Left Sidebar -->
+        <aside class="w-1/5 bg-white shadow-lg p-5 border-r">
+            <h2 class="text-lg font-semibold mb-4">Menu</h2>
+            <ul class="space-y-3">
+                <li>
+                    <a href="/add_building" class="block bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 flex items-center space-x-2">
+                        ➕ <span>Add New Building</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/view_users" class="block bg-green-500 text-white p-3 rounded-lg hover:bg-green-600 flex items-center space-x-2">
+                        👥 <span>View Users</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout" class="block bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 flex items-center space-x-2">
+                        🚪 <span>Logout</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Right Section (Available Buildings) -->
+        <main class="w-4/5 p-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Available Buildings</h2>
+
+            <% if (buildings.length === 0) { %>
+                <p class="text-gray-500">No buildings added yet.</p>
+            <% } else { %>
+                <div class="grid grid-cols-3 gap-6">
+                    <% buildings.forEach(building => { %>
+                        <a href="/building_overview/<%= building._id %>" class="block transform transition duration-200 hover:scale-105">
+                            <div class="bg-white p-5 shadow-md rounded-lg hover:bg-blue-50 border-l-4 border-blue-600">
+                                <h3 class="text-xl font-semibold text-blue-700"><%= building.building_name %></h3>
+                                <p class="text-gray-600 mt-1">Floors: <span class="font-medium"><%= building.Total_floors %></span></p>
+                            </div>
+                        </a>
+                    <% }); %>
+                </div>
+            <% } %>
+        </main>
+    </div>
+
+</body>
+</html>

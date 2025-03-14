@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Room Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-200 flex flex-col items-center justify-center min-h-screen p-4">
+    <h1 class="text-4xl font-bold text-gray-800 mb-6">College Room Management</h1>
+    <p class="text-gray-600 mb-8 text-center max-w-lg">Efficiently manage and book rooms with ease. Select your role to register.</p>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+        <!-- Admin Card -->
+        <div class="bg-white shadow-xl rounded-2xl p-6 text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Admin</h2>
+            <p class="text-gray-600 mb-4">Manage users and oversee the system.</p>
+            <a href="/register_admin" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 w-full block">Register</a>
+        </div>
+
+        <!-- Teacher Card -->
+        <div class="bg-white shadow-xl rounded-2xl p-6 text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Teacher</h2>
+            <p class="text-gray-600 mb-4">Book rooms for lectures and meetings.</p>
+            <a href="/register_teacher" class="bg-green-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-green-700 transition duration-300 w-full block">Register</a>
+        </div>
+
+        <!-- Batch Coordinator Card -->
+        <div class="bg-white shadow-xl rounded-2xl p-6 text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Batch Coordinator</h2>
+            <p class="text-gray-600 mb-4">Manage schedules and class allocations.</p>
+            <a href="/register_batch_coordinator" class="bg-purple-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-purple-700 transition duration-300 w-full block">Register</a>
+        </div>
+    </div>
+</body>
+</html>
