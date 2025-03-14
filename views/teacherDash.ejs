@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white py-4 px-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold">Teacher Dashboard</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-sm"><%= teacherName %> | <%= teacherEmail %></span>
+            <a href="/logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Logout</a>
+        </div>
+    </header>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 text-white h-screen p-6">
+            <h2 class="text-lg font-semibold mb-6">Navigation</h2>
+            <ul>
+                <li class="mb-4">
+                    <a href="/book-room" class="block py-2 px-4 bg-gray-700 rounded hover:bg-gray-600">📅 Book a Room</a>
+                </li>
+                <li class="mb-4">
+                    <a href="/attend-class" class="block py-2 px-4 bg-gray-700 rounded hover:bg-gray-600">📖 Attend a Class</a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 p-6">
+            <h2 class="text-2xl font-semibold mb-4">Booked Rooms</h2>
+            <div id="bookedRooms" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <% if (bookedRooms.length > 0) { %>
+                    <% bookedRooms.forEach(room => { %>
+                        <div class="bg-white p-4 shadow rounded-lg">
+                            <h3 class="text-lg font-semibold"><%= room.name %></h3>
+                            <p class="text-gray-600">Booked by: <%= room.teacher %></p>
+                            <p class="text-gray-600">Time: <%= room.time %></p>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p class="text-gray-500">No rooms booked yet.</p>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
