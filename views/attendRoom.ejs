@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attend Classroom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="container mx-auto p-6 bg-white shadow-lg rounded-lg mt-10">
+        <h2 class="text-3xl font-bold mb-6 text-gray-800 text-center">Attend Classroom</h2>
+
+        <!-- Building Selection -->
+        <div id="buildingContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+
+        <!-- Floor Selection -->
+        <div id="floorSection" class="hidden mt-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Select a Floor:</h3>
+            <div id="floorContainer" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Room Selection -->
+        <div id="roomSection" class="hidden mt-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Select a Room:</h3>
+            <div id="roomContainer" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+
+            <!-- Booking Time Inputs -->
+            <div class="mt-6">
+                <label for="fromTime" class="block mb-2 font-medium text-gray-700">From Time:</label>
+                <input type="datetime-local" id="fromTime" class="w-full p-2 border rounded mb-4">
+
+                <label for="toTime" class="block mb-2 font-medium text-gray-700">To Time:</label>
+                <input type="datetime-local" id="toTime" class="w-full p-2 border rounded mb-4">
+
+                <button onclick="bookRoom()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full">
+                    Book Room
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const buildingContainer = document.getElementById("buildingContainer");
+
+        try {
+            let response = await fetch("/availableBuildings");
+            let data = await response.json();
+
+            if (data.buildings.length === 0) {
+                buildingContainer.innerHTML = "<p class='text-center text-gray-500'>No buildings available.</p>";
+            }
+
+            data.buildings.forEach(building => {
+                let buildingCard = document.createElement("div");
+                buildingCard.className = "bg-white shadow-md rounded-lg p-4 cursor-pointer hover:shadow-xl transition";
+                buildingCard.innerHTML = `<h3 class="text-lg font-semibold text-gray-700">${building.building_name}</h3>`;
+                buildingCard.onclick = () => loadFloors(building._id);
+                buildingContainer.appendChild(buildingCard);
+            });
+        } catch (error) {
+            console.error("Error fetching buildings:", error);
+        }
+    });
+
+    async function loadFloors(buildingId) {
+        const floorContainer = document.getElementById("floorContainer");
+        const floorSection = document.getElementById("floorSection");
+
+        floorContainer.innerHTML = "";  
+        floorSection.classList.remove("hidden");
+
+        try {
+            let response = await fetch(`/availableFloors/${buildingId}`);
+            let data = await response.json();
+
+            if (data.floors.length === 0) {
+                floorContainer.innerHTML = "<p class='text-center text-gray-500'>No floors available.</p>";
+            }
+
+            data.floors.forEach(floor => {
+                let floorCard = document.createElement("div");
+                floorCard.className = "bg-gray-100 shadow-md rounded-lg p-4 cursor-pointer hover:shadow-lg transition";
+                floorCard.innerHTML = `<h3 class="text-md font-semibold text-gray-800">Floor ${floor.floor_Number}</h3>`;
+                floorCard.onclick = () => loadRooms(floor._id);
+                floorContainer.appendChild(floorCard);
+            });
+        } catch (error) {
+            console.error("Error fetching floors:", error);
+        }
+    }
+
+    async function loadRooms(floorId) {
+        const roomContainer = document.getElementById("roomContainer");
+        const roomSection = document.getElementById("roomSection");
+
+        roomContainer.innerHTML = "";  
+        roomSection.classList.remove("hidden");
+
+        try {
+            let response = await fetch(`/availableRooms/${floorId}`);
+            let data = await response.json();
+
+            if (data.rooms.length === 0) {
+                roomContainer.innerHTML = "<p class='text-center text-gray-500'>No rooms available.</p>";
+            }
+
+            data.rooms.forEach(room => {
+                let roomCard = document.createElement("div");
+                roomCard.className = "bg-blue-100 shadow-md rounded-lg p-4 cursor-pointer hover:shadow-lg transition";
+                roomCard.innerHTML = `<h3 class="text-md font-semibold text-gray-900">Room ${room.room_Number}</h3>`;
+                roomCard.onclick = () => selectRoom(room._id);
+                roomContainer.appendChild(roomCard);
+            });
+        } catch (error) {
+            console.error("Error fetching rooms:", error);
+        }
+    }
+
+    function selectRoom(roomId) {
+        document.getElementById("roomSection").setAttribute("data-selected-room", roomId);
+    }
+
+    async function bookRoom() {
+        const roomId = document.getElementById("roomSection").getAttribute("data-selected-room");
+        const from_time = document.getElementById("fromTime").value;
+        const to_time = document.getElementById("toTime").value;
+        const teacherId = "<%= teacher %>";
+
+        console.log(roomId)
+        console.log(from_time)
+        console.log(to_time)
+        console.log(teacherId)
+
+
+        if (!roomId || !from_time || !to_time || !teacherId || teacherId.trim() === '') {
+            alert("Invalid booking details. Ensure all fields are filled.");
+            return;
+        }
+
+        try {
+            let response = await fetch("/bookRoom", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId, teacherId, from_time, to_time })
+            });
+
+            let result = await response.json();
+            alert(result.message);
+            location.reload();
+        } catch (error) {
+            console.error("Error booking room:", error);
+        }
+    }
+    </script>
+</body>
+</html>

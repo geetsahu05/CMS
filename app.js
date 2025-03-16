@@ -3,6 +3,8 @@ const app = express()
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser");
+const mongoose = require("mongoose");
+
 
 const AdminModel = require("./models/admin")
 const BCModel = require("./models/BC")
@@ -394,7 +396,7 @@ app.get("/building_overview/:buildingId", async (req, res) => {
 });
 
 
-//testing 
+//testing Paased 👍🏻
 
 app.get("/BC_dashboard", bc_authMiddleware , async (req, res) => {
     try {
@@ -527,6 +529,103 @@ app.put("/freeRooms", async (req, res) => {
 });
 
 
+
+// teacher class attend feature testing
+
+app.get("/attendClassroom", teacher_authMiddleware , async (req, res) => {
+    try {
+        const buildings = await buildingModel.find();
+        const teacher = await teacherModel.findOne({email: req.user.email})
+        console.log(req.user) // Fetch all available buildings
+        res.render("attendRoom", { buildings, teacher: teacher._id }); // Pass data to EJS
+    } catch (error) {
+        console.error("Error rendering classroom page:", error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+
+app.get('/availableBuildings', async (req, res) => {
+    try {
+        const buildings = await buildingModel.find();
+        res.json({ buildings });
+    } catch (error) {
+        console.error("Error fetching buildings:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+app.get('/availableFloors/:buildingId', async (req, res) => {
+    try {
+        const building = await buildingModel.findById(req.params.buildingId).populate('floors');
+        res.json({ floors: building.floors });
+    } catch (error) {
+        console.error("Error fetching floors:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+app.get('/availableRooms/:floorId', async (req, res) => {
+    try {
+        const floor = await floorModel.findById(req.params.floorId).populate({
+            path: 'rooms',
+            match: { assigned_teacher: null }  // Get only available rooms
+        });
+        res.json({ rooms: floor.rooms });
+    } catch (error) {
+        console.error("Error fetching rooms:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+app.post("/bookRoom", async (req, res) => {
+    try {
+        const { roomId, teacherId, from_time, to_time } = req.body;
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(roomId) || !mongoose.Types.ObjectId.isValid(teacherId)) {
+            return res.status(400).json({ message: "Invalid room or teacher ID." });
+        }
+
+        const updatedRoom = await roomModel.findOneAndUpdate(
+            { _id: roomId }, // Find the existing room by ID
+            { 
+                assigned_teacher: teacherId, 
+                booking_time: { from_time, to_time } // Corrected structure
+            },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedRoom) {
+            return res.status(404).json({ message: "Room not found." });
+        }
+
+        res.json({ message: "Room booked successfully", updatedRoom });
+    } catch (error) {
+        console.error("Error booking room:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) => {
+    try {
+        const teacherId = req.user.id;
+
+        // Fetch rooms booked by the teacher
+        const bookedRooms = await roomModel.find({ "Booked_by.userId": teacherId });
+
+        // Fetch rooms the teacher is attending
+        const attendingRooms = await roomModel.find({ assigned_teacher: teacherId });
+
+        res.render("teacherDash2", { bookedRooms, attendingRooms });
+    } catch (error) {
+        console.error("Error fetching teacher dashboard:", error);
+        res.status(500).send("Server Error");
+    }
+});
 
 
 app.listen(3000)

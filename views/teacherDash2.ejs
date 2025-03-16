@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 text-xl font-bold">
+        Teacher Dashboard
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex h-screen">
+        <!-- Left Sidebar -->
+        <aside class="w-1/4 bg-white shadow-lg p-5">
+            <h2 class="text-lg font-semibold mb-4">Actions</h2>
+            <button class="w-full bg-blue-500 text-white py-2 rounded mb-3 hover:bg-blue-600" onclick="location.href='/Teacher_dashboard'">
+                📌 Book Room
+            </button>
+            <button class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600" onclick="location.href='/attendClassroom'">
+                🎓 Attend Class
+            </button>
+        </aside>
+
+        <!-- Right Content (Booked & Attending Classes) -->
+        <main class="w-3/4 p-5">
+            <h2 class="text-xl font-semibold mb-4">Your Classes</h2>
+
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Booked Rooms -->
+                <div class="bg-white p-4 shadow-lg rounded-lg">
+                    <h3 class="text-lg font-bold mb-3">📅 Booked Rooms</h3>
+                    <ul id="bookedRooms" class="text-gray-700">
+                        <% bookedRooms.forEach(room => { %>
+                            <li class="p-2 border-b"><strong>Room:</strong> <%= room.room_Number %></li>
+                        <% }); %>
+                    </ul>
+                </div>
+
+                <!-- Attending Rooms -->
+                <div class="bg-white p-4 shadow-lg rounded-lg">
+                    <h3 class="text-lg font-bold mb-3">🎓 Attending Rooms</h3>
+                    <ul id="attendingRooms" class="text-gray-700">
+                        <% attendingRooms.forEach(room => { %>
+                            <li class="p-2 border-b">
+                                <strong>Room:</strong> <%= room.room_Number %> | 
+                                <strong>Time:</strong> 
+                                <%= new Date(room.booking_time.from_time).toLocaleString('en-IN', { 
+                                    day: '2-digit', month: '2-digit', year: 'numeric', 
+                                    hour: '2-digit', minute: '2-digit', hour12: true 
+                                }) %> - 
+                                <%= new Date(room.booking_time.to_time).toLocaleString('en-IN', { 
+                                    day: '2-digit', month: '2-digit', year: 'numeric', 
+                                    hour: '2-digit', minute: '2-digit', hour12: true 
+                                }) %>
+                            </li>
+                        <% }); %>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
