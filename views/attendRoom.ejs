@@ -126,12 +126,7 @@
         const from_time = document.getElementById("fromTime").value;
         const to_time = document.getElementById("toTime").value;
         const teacherId = "<%= teacher %>";
-
-        console.log(roomId)
-        console.log(from_time)
-        console.log(to_time)
-        console.log(teacherId)
-
+        
 
         if (!roomId || !from_time || !to_time || !teacherId || teacherId.trim() === '') {
             alert("Invalid booking details. Ensure all fields are filled.");

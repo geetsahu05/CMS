@@ -628,4 +628,27 @@ app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) =
 });
 
 
+app.post("/freeClassroom", teacher_authMiddleware, async (req, res) => {
+    try {
+        const { roomId } = req.body;
+        const teacherId = req.user.id;
+
+        const room = await roomModel.findOne({ _id: roomId, assigned_teacher: teacherId });
+
+        if (!room) {
+            return res.status(404).json({ message: "Room not found or not assigned to you." });
+        }
+
+        // Free the room by resetting its details
+        room.assigned_teacher = null;
+        room.booking_time = null;
+
+        await room.save();
+        res.json({ message: "Classroom freed successfully!" });
+    } catch (error) {
+        console.error("Error freeing classroom:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 app.listen(3000)

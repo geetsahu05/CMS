@@ -45,17 +45,23 @@
                     <h3 class="text-lg font-bold mb-3">🎓 Attending Rooms</h3>
                     <ul id="attendingRooms" class="text-gray-700">
                         <% attendingRooms.forEach(room => { %>
-                            <li class="p-2 border-b">
-                                <strong>Room:</strong> <%= room.room_Number %> | 
-                                <strong>Time:</strong> 
-                                <%= new Date(room.booking_time.from_time).toLocaleString('en-IN', { 
-                                    day: '2-digit', month: '2-digit', year: 'numeric', 
-                                    hour: '2-digit', minute: '2-digit', hour12: true 
-                                }) %> - 
-                                <%= new Date(room.booking_time.to_time).toLocaleString('en-IN', { 
-                                    day: '2-digit', month: '2-digit', year: 'numeric', 
-                                    hour: '2-digit', minute: '2-digit', hour12: true 
-                                }) %>
+                            <li class="p-2 border-b flex justify-between items-center">
+                                <span>
+                                    <strong>Room:</strong> <%= room.room_Number %> | 
+                                    <strong>Time:</strong> 
+                                    <%= new Date(room.booking_time.from_time).toLocaleString('en-IN', { 
+                                        day: '2-digit', month: '2-digit', year: 'numeric', 
+                                        hour: '2-digit', minute: '2-digit', hour12: true 
+                                    }) %> - 
+                                    <%= new Date(room.booking_time.to_time).toLocaleString('en-IN', { 
+                                        day: '2-digit', month: '2-digit', year: 'numeric', 
+                                        hour: '2-digit', minute: '2-digit', hour12: true 
+                                    }) %>
+                                </span>
+                                <button class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600" 
+                                    onclick="freeClassroom('<%= room._id %>')">
+                                    Free Classroom
+                                </button>
                             </li>
                         <% }); %>
                     </ul>
@@ -63,5 +69,19 @@
             </div>
         </main>
     </div>
+
+    <script>
+        async function freeClassroom(roomId) {
+            const response = await fetch("/freeClassroom", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+            location.reload(); // Refresh the page to update UI
+        }
+    </script>
 </body>
 </html>
