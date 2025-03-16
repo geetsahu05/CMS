@@ -18,7 +18,7 @@
         <aside class="w-1/4 bg-white shadow-lg p-5">
             <h2 class="text-lg font-semibold mb-4">Actions</h2>
             <button class="w-full bg-blue-500 text-white py-2 rounded mb-3 hover:bg-blue-600" onclick="location.href='/Teacher_dashboard'">
-                📌 Book Room
+                📌 Book/Unbook Room
             </button>
             <button class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600" onclick="location.href='/attendClassroom'">
                 🎓 Attend Class
@@ -35,7 +35,11 @@
                     <h3 class="text-lg font-bold mb-3">📅 Booked Rooms</h3>
                     <ul id="bookedRooms" class="text-gray-700">
                         <% bookedRooms.forEach(room => { %>
-                            <li class="p-2 border-b"><strong>Room:</strong> <%= room.room_Number %></li>
+                            <li class="p-2 border-b">
+                                <strong>Room:</strong> <%= room.room_Number %> |
+                                <strong>Floor:</strong> <%= room.floor_id?.floor_Number %> |
+                                <strong>Building:</strong> <%= room.floor_id?.building_id?.building_name %>
+                            </li>
                         <% }); %>
                     </ul>
                 </div>

@@ -21,7 +21,7 @@ const roomSchema = new mongoose.Schema({
         },
         userType: {
             type: String,
-            enum: ["BC", "teacher" , "student"],
+            enum: ["BC", "Teacher" , "Student"],
             default: null
         }
     },

@@ -108,7 +108,12 @@
             data.rooms.forEach(room => {
                 let roomCard = document.createElement("div");
                 roomCard.className = "bg-blue-100 shadow-md rounded-lg p-4 cursor-pointer hover:shadow-lg transition";
-                roomCard.innerHTML = `<h3 class="text-md font-semibold text-gray-900">Room ${room.room_Number}</h3>`;
+                roomCard.innerHTML = `
+                    <h3 class="text-md font-semibold text-gray-900">Room ${room.room_Number}</h3>
+                    <p class="text-sm text-gray-700"><strong>Booked By:</strong> ${room.Booked_by.userEmail || "N/A"}</p>
+                    <p class="text-sm text-gray-700"><strong>Branch:</strong> ${room.branch || "N/A"}</p>
+                    <p class="text-sm text-gray-700"><strong>Batch:</strong> ${room.batch || "N/A"}</p>
+                `;
                 roomCard.onclick = () => selectRoom(room._id);
                 roomContainer.appendChild(roomCard);
             });

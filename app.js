@@ -199,7 +199,7 @@ app.post("/teacher_log", async (req, res) => {
 
         res.cookie("Teachertoken", token); //testing point
 
-        res.redirect("/Teacher_dashboard")
+        res.redirect("/teacher_landing_dashboard")
 
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
@@ -614,11 +614,25 @@ app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) =
     try {
         const teacherId = req.user.id;
 
-        // Fetch rooms booked by the teacher
-        const bookedRooms = await roomModel.find({ "Booked_by.userId": teacherId });
+        // Fetch rooms booked by the teacher and populate floor & building details
+        const bookedRooms = await roomModel
+            .find({ "Booked_by.userId": teacherId })
+            .populate({
+                path: "floor_id",
+                populate: {
+                    path: "building_id"
+                }
+            });
 
-        // Fetch rooms the teacher is attending
-        const attendingRooms = await roomModel.find({ assigned_teacher: teacherId });
+        // Fetch rooms the teacher is attending and populate floor & building details
+        const attendingRooms = await roomModel
+            .find({ assigned_teacher: teacherId })
+            .populate({
+                path: "floor_id",
+                populate: {
+                    path: "building_id"
+                }
+            });
 
         res.render("teacherDash2", { bookedRooms, attendingRooms });
     } catch (error) {
@@ -626,6 +640,7 @@ app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) =
         res.status(500).send("Server Error");
     }
 });
+
 
 
 app.post("/freeClassroom", teacher_authMiddleware, async (req, res) => {
