@@ -1,6 +1,7 @@
 const mongoose = require("mongoose")
+require("dotenv").config(); 
 
-mongoose.connect("mongodb://127.0.0.1:27017/CMS");
+mongoose.connect(process.env.MONGODB_ALTAS_LINK);
 
 const AdminSchema = new mongoose.Schema({
 

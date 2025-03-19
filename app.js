@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt")
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
-
+require("dotenv").config();
 
 const AdminModel = require("./models/admin")
 const BCModel = require("./models/BC")
@@ -20,6 +20,8 @@ app.use(express.urlencoded({extended:true}))
 app.use(cookieParser());
 
 
+const SK = process.env.SECRET_KEY
+
 const bc_authMiddleware = (req, res, next) => {
     const token = req.cookies.BCtoken;
 
@@ -28,7 +30,7 @@ const bc_authMiddleware = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, "1234");
+        const decoded = jwt.verify(token, SK);
         req.user = decoded;
         next();
     } catch (error) {
@@ -44,7 +46,7 @@ const admin_authMiddleware = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, "1234");
+        const decoded = jwt.verify(token, SK);
         req.user = decoded;
         next();
     } catch (error) {
@@ -60,7 +62,7 @@ const teacher_authMiddleware = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, "1234");
+        const decoded = jwt.verify(token, SK);
         req.user = decoded;
         next();
     } catch (error) {
@@ -128,7 +130,7 @@ app.post("/login_bc", async (req, res) => {
 
         const token = jwt.sign(
             { id: BC._id, email: BC.email },
-            "1234",
+         SK,
         );
 
         res.cookie("BCtoken", token); //testing point
@@ -194,7 +196,7 @@ app.post("/teacher_log", async (req, res) => {
 
         const token = jwt.sign(
             { id: teacher._id, email: teacher.email },
-            "1234",
+         SK,
         );
 
         res.cookie("Teachertoken", token); //testing point
@@ -231,7 +233,7 @@ app.post("/register_admin" , async (req , res) => {
 
         // const token = jwt.sign(
         //     { id: newUser._id, email: newUser.email },
-        //     "1234",
+        //     SK,
         //     { expiresIn: "1h" }
         // );
 
@@ -265,7 +267,7 @@ app.post("/login_admin", async (req, res) => {
 
         const token = jwt.sign(
             { id: admin._id, email: admin.email },
-            "1234",
+         SK,
         );
 
         res.cookie("Admintoken", token); //testing point
@@ -666,4 +668,4 @@ app.post("/freeClassroom", teacher_authMiddleware, async (req, res) => {
     }
 });
 
-app.listen(3000)
+app.listen(process.env.PORT)
