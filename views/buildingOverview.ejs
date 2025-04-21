@@ -24,6 +24,7 @@
 
     <!-- Main Container -->
     <div class="max-w-4xl mx-auto mt-8 p-6 bg-white shadow-lg rounded-lg">
+
         <!-- Building Details -->
         <div class="mb-6">
             <h2 class="text-2xl font-semibold text-blue-700"><%= building.building_name %></h2>
@@ -31,6 +32,22 @@
             <% if (building.address) { %>
                 <p class="text-gray-600">Address: <span class="font-medium"><%= building.address %></span></p>
             <% } %>
+        </div>
+
+        <!-- Legend -->
+        <div class="mb-4 flex space-x-4">
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-green-200 rounded"></div>
+                <span class="text-sm text-gray-700">Available</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-yellow-200 rounded"></div>
+                <span class="text-sm text-gray-700">Booked with Teacher</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-red-200 rounded"></div>
+                <span class="text-sm text-gray-700">Booked without Teacher</span>
+            </div>
         </div>
 
         <!-- Floors Section -->
@@ -49,14 +66,22 @@
                         <% if (floor.rooms.length > 0) { %>
                             <div class="grid grid-cols-3 gap-4">
                                 <% floor.rooms.forEach(room => { %>
-                                    <% let bgColor = room.booking_status === "Booked" ? "bg-red-200" : "bg-green-200"; %>
+                                    <% 
+                                        let bgColor = "bg-green-200"; // Available by default
+                                        if (room.booking_status === "Booked") {
+                                            if (room.assigned_teacher) {
+                                                bgColor = "bg-yellow-200"; // Booked with teacher
+                                            } else {
+                                                bgColor = "bg-red-200"; // Booked without teacher
+                                            }
+                                        }
+                                    %>
                                     <div class="border p-3 rounded-lg shadow-md <%= bgColor %>">
                                         <h5 class="text-md font-semibold text-gray-800">Room <%= room.room_Number %></h5>
                                         <p class="text-sm text-gray-600">Status: <%= room.booking_status %></p>
                                         <p class="text-sm text-gray-600">By: <%= room.Booked_by.userEmail %></p>
                                         <p class="text-sm text-gray-600">Branch: <%= room.branch %></p>
                                         <p class="text-sm text-gray-600">Batch: <%= room.batch %></p>
-
                                     </div>
                                 <% }); %>
                             </div>
