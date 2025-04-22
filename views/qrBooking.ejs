@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Room Booking via QR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-xl font-bold mb-4 text-center">📅 Book Room</h1>
+        
+        <form action="/bookRoomFromQR" method="POST" class="space-y-4">
+            <input type="hidden" name="roomID" value="<%= roomID %>">
+
+            <div>
+                <label class="block font-semibold">From Time</label>
+                <input type="datetime-local" name="from_time" class="w-full border p-2 rounded" required>
+            </div>
+
+            <div>
+                <label class="block font-semibold">To Time</label>
+                <input type="datetime-local" name="to_time" class="w-full border p-2 rounded" required>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+                Confirm Booking
+            </button>
+        </form>
+
+        <a href="/Teacher_dashboard" class="block text-center mt-4 text-blue-600 hover:underline">
+            ⬅ Back to Dashboard
+        </a>
+    </div>
+</body>
+</html>

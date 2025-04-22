@@ -614,6 +614,50 @@ app.post("/bookRoom", async (req, res) => {
     }
 });
 
+app.get("/QRgenerateroom/:roomID", teacher_authMiddleware, async (req, res) => {
+    try {
+        const roomID = req.params.roomID;
+
+        res.render("qrBooking", { roomID });
+    } catch (error) {
+        console.error("Error loading booking interface:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+app.post("/bookRoomFromQR", teacher_authMiddleware, async (req, res) => {
+    try {
+        const { roomID, from_time, to_time } = req.body;
+        const teacherId = req.user.id; // Extracted from token via middleware
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(roomID) || !mongoose.Types.ObjectId.isValid(teacherId)) {
+            return res.status(400).json({ message: "Invalid room or teacher ID." });
+        }
+
+        const updatedRoom = await roomModel.findOneAndUpdate(
+            { _id: roomID },
+            {
+                assigned_teacher: teacherId,
+                booking_time: {
+                    from_time: new Date(from_time),
+                    to_time: new Date(to_time),
+                },
+            },
+            { new: true }
+        );
+
+        if (!updatedRoom) {
+            return res.status(404).json({ message: "Room not found." });
+        }
+
+        res.json({ message: "✅ Room booked successfully via QR!", updatedRoom });
+    } catch (error) {
+        console.error("Error booking room via QR:", error);
+        res.status(500).json({ message: "Booking failed due to server error." });
+    }
+});
+
 app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) => {
     try {
         const teacherId = req.user.id;
