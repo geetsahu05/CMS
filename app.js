@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs")
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 require("dotenv").config();
 
 const AdminModel = require("./models/admin")
@@ -22,6 +22,21 @@ app.set("view engine", "ejs");
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 app.use(cookieParser());
+
+
+const session = require("express-session");
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "yoursecret",
+  resave: false,
+  saveUninitialized: false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+
+
 app.use(passport.initialize());
 
 
@@ -40,100 +55,166 @@ const getModelByRole = (role) => {
   }
 };
 
-passport.use(new GoogleStrategy(
-  {
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback",
-    passReqToCallback: true // so we can read req.query.state
-  },
-  async (req, accessToken, refreshToken, profile, done) => {
-    try {
-      const role = (req.query && req.query.state) ? req.query.state : 'bc';
-      const Model = getModelByRole(role);
-
-      const googleId = profile.id;
-      const name = profile.displayName;
-      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
-      const picture = profile.photos && profile.photos[0] && profile.photos[0].value;
-
-      let user = await Model.findOne({ $or: [{ googleId }, { email }] });
-
-      if (!user) {
-        // Create a new user
-        user = await Model.create({
-          name,
-          email,
-          googleId,
-          picture,
-          authProvider: "google" // 👈 mark as google user
-        });
-      } else {
-        // Update existing record if missing googleId
-        if (!user.googleId) user.googleId = googleId;
-        if (!user.picture) user.picture = picture;
-        user.authProvider = "google"; // 👈 update provider
-        await user.save();
-      }
-
-      // Issue JWT
-      const token = jwt.sign(
-        { id: user._id, email: user.email, role: role.toLowerCase() },
-        SK,
-        { expiresIn: '1h' }
-      );
-
-      return done(null, { user, token, role: role.toLowerCase() });
-    } catch (err) {
-      return done(err, null);
-    }
-  }
-));
-
-// Start OAuth (disable session here)
-app.get('/auth/google/:role', (req, res, next) => {
-  const role = req.params.role || 'bc';
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    state: role,
-    session: false // 👈 important
-  })(req, res, next);
+// Add debug middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
 });
 
-// Callback (disable session here too)
-app.get(
-  '/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/', session: false }), // 👈 important
-  (req, res) => {
-    const payload = req.user || {};
-    const token = payload.token;
-    const role = (payload.role || 'bc').toLowerCase();
+// Google Strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "http://localhost:3000/auth/google/callback",
+  passReqToCallback: true
+}, async (req, accessToken, refreshToken, profile, done) => {
+  try {
+    console.log('Google profile received:', profile);
+    
+    // Extract role from state parameter
+    const role = req.query.state || 'bc';
+    console.log('Role from state:', role);
+    
+    const Model = getModelByRole(role);
 
-    if (!token) {
-      return res.redirect('/');
+    const googleId = profile.id;
+    const email = profile.emails?.[0]?.value;
+    const name = profile.displayName;
+    const picture = profile.photos?.[0]?.value;
+
+    if (!email) {
+      return done(new Error("Email not provided by Google"), null);
     }
 
-    let cookieName = "BCtoken";
-    let redirectUrl = "/BC_dashboard";
-
-    if (role === 'admin') {
-      cookieName = "Admintoken";
-      redirectUrl = "/adminDash";
-    } else if (role === 'teacher') {
-      cookieName = "Teachertoken";
-      redirectUrl = "/teacher_landing_dashboard";
-    }
-
-    res.cookie(cookieName, token, {
-      httpOnly: true,
-      // secure: true, // enable in prod (HTTPS)
-      maxAge: 1000 * 60 * 60
+    let user = await Model.findOne({ 
+      $or: [{ googleId }, { email }] 
     });
 
-    res.redirect(redirectUrl);
+    if (!user) {
+      user = await Model.create({
+        name,
+        email,
+        googleId,
+        picture,
+        authProvider: "google"
+      });
+      console.log('New user created:', user);
+    } else {
+      user.googleId = googleId;
+      user.picture = picture;
+      user.authProvider = "google";
+      await user.save();
+      console.log('Existing user updated:', user);
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: role.toLowerCase() },
+      SK,
+      { expiresIn: '1h' }
+    );
+
+    return done(null, { user, token, role: role.toLowerCase() });
+  } catch (error) {
+    console.error('Google strategy error:', error);
+    return done(error, null);
+  }
+}));
+
+// ✅ FIXED: SINGLE CALLBACK ROUTE (PUT THIS FIRST)
+app.get('/auth/google/callback',
+  (req, res, next) => {
+    console.log('=== CALLBACK HIT ===');
+    console.log('OAuth callback - query params:', req.query);
+    console.log('OAuth callback - state:', req.query.state);
+    
+    passport.authenticate('google', { 
+      failureRedirect: '/?error=auth_failed',
+      session: false 
+    }, (err, user, info) => {
+      if (err) {
+        console.error('Passport auth error:', err);
+        return res.redirect('/?error=auth_error');
+      }
+      if (!user) {
+        console.error('No user returned:', info);
+        return res.redirect('/?error=no_user');
+      }
+      req.user = user;
+      next();
+    })(req, res, next);
+  },
+  (req, res) => {
+    try {
+      const { token, role } = req.user;
+      
+      if (!token) {
+        console.error('No token in user object');
+        return res.redirect('/?error=no_token');
+      }
+
+      let cookieName, redirectUrl;
+      
+      switch(role) {
+        case 'admin':
+          cookieName = "Admintoken";
+          redirectUrl = "/adminDash";
+          break;
+        case 'teacher':
+          cookieName = "Teachertoken";
+          redirectUrl = "/teacher_landing_dashboard";
+          break;
+        case 'bc':
+        default:
+          cookieName = "BCtoken";
+          redirectUrl = "/BC_dashboard";
+      }
+
+      res.cookie(cookieName, token, {
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 // 1 hour
+      });
+
+      console.log('OAuth successful, redirecting to:', redirectUrl);
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Callback handler error:', error);
+      res.redirect('/?error=callback_error');
+    }
   }
 );
 
+// ✅ ADD THIS ROUTE FOR QUERY PARAMETER FORMAT
+app.get('/auth/google', (req, res, next) => {
+  const role = req.query.role || 'bc';
+  console.log('Starting OAuth for role (query):', role);
+  
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: role,
+    session: false
+  })(req, res, next);
+});
+
+// ✅ FIXED: SINGLE INITIATION ROUTE (PUT THIS AFTER CALLBACK)
+app.get('/auth/google/:role', (req, res, next) => {
+  const role = req.params.role;
+  console.log('Starting OAuth for role:', role);
+  
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: role,
+    session: false
+  })(req, res, next);
+});
+
+// Test route
+app.get('/test-oauth', (req, res) => {
+  res.json({
+    clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Missing',
+    callbackUrl: 'http://localhost:3000/auth/google/callback'
+  });
+});
 
 const bc_authMiddleware = (req, res, next) => {
     const token = req.cookies.BCtoken;
@@ -818,4 +899,5 @@ app.post("/freeClassroom", teacher_authMiddleware, async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT)
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

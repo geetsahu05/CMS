@@ -1,4 +1,4 @@
-<!-- register_admin.ejs -->
+<!-- register_teacher.ejs -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,19 +10,32 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
     <div class="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 class="text-2xl font-bold text-gray-800 text-center">Register as Teacher</h2>
+        
+        <!-- Normal Registration Form -->
         <form action="/register_teacher" method="POST" class="mt-4">
             <input type="text" name="name" placeholder="Full Name" class="w-full p-2 border rounded mb-3" required>
             <input type="email" name="email" placeholder="Email" class="w-full p-2 border rounded mb-3" required>
             <input type="password" name="password" placeholder="Password" class="w-full p-2 border rounded mb-3" required>
             <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Register</button>
-        
-            <p class="text-center text-sm text-gray-600 mt-4">
-                Already have an account? 
-                <a href="/teacher_log" class="text-blue-500 font-medium hover:underline">Login here</a>
-            </p>
+        </form>
+
+        <!-- Divider -->
+        <div class="flex items-center my-4">
+            <hr class="flex-grow border-t border-gray-300">
+            <span class="mx-2 text-gray-500">OR</span>
+            <hr class="flex-grow border-t border-gray-300">
         </div>
 
-        </form>
+        <!-- Google Sign-In Button -->
+        <a href="/auth/google/teacher" class="w-full inline-flex items-center justify-center bg-red-500 text-white p-2 rounded hover:bg-red-600">
+            <img src="https://img.icons8.com/color/24/google-logo.png" alt="Google logo" class="mr-2">
+            Sign up with Google
+        </a>
+
+        <p class="text-center text-sm text-gray-600 mt-4">
+            Already have an account? 
+            <a href="/teacher_log" class="text-blue-500 font-medium hover:underline">Login here</a>
+        </p>
     </div>
 </body>
 </html>
