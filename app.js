@@ -62,7 +62,7 @@ app.use((req, res, next) => {
 });
 
 const callbackURL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-vercel-app.vercel.app/auth/google/callback'
+  ? 'https://cms-4ud8.vercel.app/auth/google/callback'
   : 'http://localhost:3000/auth/google/callback';
 
 // Google Strategy
