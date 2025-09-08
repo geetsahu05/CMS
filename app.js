@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require("bcryptjs")
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 require("dotenv").config();
 
 const AdminModel = require("./models/admin")
@@ -20,9 +22,118 @@ app.set("view engine", "ejs");
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 app.use(cookieParser());
+app.use(passport.initialize());
+
 
 
 const SK = process.env.SECRET_KEY
+
+// Helper to pick model by role string
+const getModelByRole = (role) => {
+  switch ((role || '').toLowerCase()) {
+    case 'admin': return AdminModel;
+    case 'teacher': return teacherModel;
+    case 'bc':
+    case 'batch_coordinator':
+    case 'batch-coordinator':
+    default: return BCModel;
+  }
+};
+
+passport.use(new GoogleStrategy(
+  {
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/auth/google/callback",
+    passReqToCallback: true // so we can read req.query.state
+  },
+  async (req, accessToken, refreshToken, profile, done) => {
+    try {
+      const role = (req.query && req.query.state) ? req.query.state : 'bc';
+      const Model = getModelByRole(role);
+
+      const googleId = profile.id;
+      const name = profile.displayName;
+      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+      const picture = profile.photos && profile.photos[0] && profile.photos[0].value;
+
+      let user = await Model.findOne({ $or: [{ googleId }, { email }] });
+
+      if (!user) {
+        // Create a new user
+        user = await Model.create({
+          name,
+          email,
+          googleId,
+          picture,
+          authProvider: "google" // 👈 mark as google user
+        });
+      } else {
+        // Update existing record if missing googleId
+        if (!user.googleId) user.googleId = googleId;
+        if (!user.picture) user.picture = picture;
+        user.authProvider = "google"; // 👈 update provider
+        await user.save();
+      }
+
+      // Issue JWT
+      const token = jwt.sign(
+        { id: user._id, email: user.email, role: role.toLowerCase() },
+        SK,
+        { expiresIn: '1h' }
+      );
+
+      return done(null, { user, token, role: role.toLowerCase() });
+    } catch (err) {
+      return done(err, null);
+    }
+  }
+));
+
+// Start OAuth (disable session here)
+app.get('/auth/google/:role', (req, res, next) => {
+  const role = req.params.role || 'bc';
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    state: role,
+    session: false // 👈 important
+  })(req, res, next);
+});
+
+// Callback (disable session here too)
+app.get(
+  '/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/', session: false }), // 👈 important
+  (req, res) => {
+    const payload = req.user || {};
+    const token = payload.token;
+    const role = (payload.role || 'bc').toLowerCase();
+
+    if (!token) {
+      return res.redirect('/');
+    }
+
+    let cookieName = "BCtoken";
+    let redirectUrl = "/BC_dashboard";
+
+    if (role === 'admin') {
+      cookieName = "Admintoken";
+      redirectUrl = "/adminDash";
+    } else if (role === 'teacher') {
+      cookieName = "Teachertoken";
+      redirectUrl = "/teacher_landing_dashboard";
+    }
+
+    res.cookie(cookieName, token, {
+      httpOnly: true,
+      // secure: true, // enable in prod (HTTPS)
+      maxAge: 1000 * 60 * 60
+    });
+
+    res.redirect(redirectUrl);
+  }
+);
+
 
 const bc_authMiddleware = (req, res, next) => {
     const token = req.cookies.BCtoken;
@@ -201,7 +312,7 @@ app.post("/teacher_log", async (req, res) => {
          SK,
         );
 
-        res.cookie("Teachertoken", token); //testing point
+        res.cookie("Teachertoken", token); 
 
         res.redirect("/teacher_landing_dashboard")
 
@@ -233,13 +344,6 @@ app.post("/register_admin" , async (req , res) => {
 
         const newUser = await AdminModel.create({ name, email, password: hashedPassword});
 
-        // const token = jwt.sign(
-        //     { id: newUser._id, email: newUser.email },
-        //     SK,
-        //     { expiresIn: "1h" }
-        // );
-
-        //res.cookie("token" , token)
         res.redirect('/login_admin')
 
         

@@ -2,25 +2,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Registration</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Registration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 class="text-2xl font-bold text-gray-800 text-center">Register as Admin</h2>
-        <form action="/register_admin" method="POST" class="mt-4">
-            <input type="text" name="name" placeholder="Full Name" class="w-full p-2 border rounded mb-3" required>
-            <input type="email" name="email" placeholder="Email" class="w-full p-2 border rounded mb-3" required>
-            <input type="password" name="password" placeholder="Password" class="w-full p-2 border rounded mb-3" required>
-            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Register</button>
-        </form>
+  <div class="bg-white p-8 rounded-lg shadow-lg w-96">
+    <h2 class="text-2xl font-bold text-gray-800 text-center">Register as Admin</h2>
 
-        <p class="text-center text-sm text-gray-600 mt-4">
-            Already have an account? 
-            <a href="/login_admin" class="text-blue-500 font-medium hover:underline">Login here</a>
-        </p>
+    <!-- Local registration form -->
+    <form action="/register_admin" method="POST" class="mt-4">
+      <input type="text" name="name" placeholder="Full Name" class="w-full p-2 border rounded mb-3" required>
+      <input type="email" name="email" placeholder="Email" class="w-full p-2 border rounded mb-3" required>
+      <input type="password" name="password" placeholder="Password" class="w-full p-2 border rounded mb-3" required>
+      <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+        Register
+      </button>
+    </form>
+
+    <!-- Divider -->
+    <div class="flex items-center my-4">
+      <hr class="flex-grow border-gray-300">
+      <span class="px-2 text-gray-500 text-sm">OR</span>
+      <hr class="flex-grow border-gray-300">
     </div>
+
+    <!-- Google OAuth button -->
+    <a href="/auth/google/admin"
+       class="flex items-center justify-center w-full bg-red-500 text-white p-2 rounded hover:bg-red-600">
+      <img src="https://www.svgrepo.com/show/355037/google.svg" alt="Google" class="w-5 h-5 mr-2">
+      Sign up with Google
+    </a>
+
+    <p class="text-center text-sm text-gray-600 mt-4">
+      Already have an account?
+      <a href="/login_admin" class="text-blue-500 font-medium hover:underline">Login here</a>
+    </p>
+  </div>
 </body>
 </html>

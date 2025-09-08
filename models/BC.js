@@ -1,15 +1,14 @@
-const mongoose = require("mongoose")
-
+const mongoose = require("mongoose");
 
 const BCSchema = new mongoose.Schema({
-
     name: String,
-    email: String,
+    email: { type: String, required: true, unique: true },
     password: String,
-    Booked_rooms:[{type: mongoose.Schema.ObjectId , ref: "room"}]
+    googleId: { type: String, unique: true, sparse: true },
+    picture: String,
+    authProvider: { type: String, enum: ["local", "google"], default: "local" },
+    Booked_rooms: [{ type: mongoose.Schema.ObjectId, ref: "room" }]
+});
 
-
-})
-
-const BCModel = mongoose.model('BC' , BCSchema)
-module.exports = BCModel
+const BCModel = mongoose.model("BC", BCSchema);
+module.exports = BCModel;
