@@ -61,11 +61,15 @@ app.use((req, res, next) => {
   next();
 });
 
+const callbackURL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-vercel-app.vercel.app/auth/google/callback'
+  : 'http://localhost:3000/auth/google/callback';
+
 // Google Strategy
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:3000/auth/google/callback",
+  callbackURL: callbackURL,
   passReqToCallback: true
 }, async (req, accessToken, refreshToken, profile, done) => {
   try {
