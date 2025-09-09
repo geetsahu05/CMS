@@ -5,62 +5,317 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#64748b',
+                        success: '#22c55e',
+                        danger: '#ef4444',
+                        warning: '#f59e0b',
+                        info: '#3b82f6',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .occupancy-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            overflow: hidden;
+        }
+        
+        .occupancy-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .occupancy-low { background: #22c55e; } /* Green */
+        .occupancy-medium { background: #f59e0b; } /* Amber */
+        .occupancy-high { background: #ef4444; } /* Red */
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+                overflow: hidden;
+            }
+            
+            .sidebar:hover {
+                width: 250px;
+                z-index: 50;
+            }
+            
+            .sidebar .menu-text {
+                opacity: 0;
+            }
+            
+            .sidebar:hover .menu-text {
+                opacity: 1;
+            }
+            
+            .main-content {
+                width: calc(100% - 70px);
+            }
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 flex flex-col min-h-screen">
 
     <!-- Header -->
-    <header class="bg-blue-700 text-white p-4 flex justify-between items-center shadow-md">
-        <h1 class="text-2xl font-bold">Admin Dashboard</h1>
-        <div class="text-right">
-            <p class="text-sm">Welcome, <span class="font-semibold"><%= admin.name %></span></p>
-            <p class="text-sm">Email: <span class="font-semibold"><%= admin.email %></span></p>
+    <header class="bg-gradient-to-r from-primary to-blue-800 text-white p-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white/20 p-2 rounded-lg">
+                <i class="fas fa-tachometer-alt text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="text-right">
+                <p class="text-sm">Welcome, <span class="font-semibold"><%= admin.name %></span></p>
+                <p class="text-xs opacity-80">Email: <span class="font-medium"><%= admin.email %></span></p>
+            </div>
+            <div class="relative">
+                <button class="bg-white/20 p-2 rounded-full hover:bg-white/30 transition">
+                    <i class="fas fa-bell"></i>
+                    <span class="absolute -top-1 -right-1 bg-danger h-5 w-5 rounded-full text-xs flex items-center justify-center">3</span>
+                </button>
+            </div>
         </div>
     </header>
 
     <!-- Main Container -->
-    <div class="flex h-screen">
+    <div class="flex flex-1">
         <!-- Left Sidebar -->
-        <aside class="w-1/5 bg-white shadow-lg p-5 border-r">
-            <h2 class="text-lg font-semibold mb-4">Menu</h2>
-            <ul class="space-y-3">
+        <aside class="sidebar w-64 bg-dark text-white p-5 shadow-lg flex flex-col">
+            <h2 class="text-lg font-semibold mb-6 flex items-center space-x-2">
+                <i class="fas fa-bars"></i>
+                <span class="menu-text">Navigation Menu</span>
+            </h2>
+            <ul class="space-y-3 flex-1">
                 <li>
-                    <a href="/add_building" class="block bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 flex items-center space-x-2">
-                        ➕ <span>Add New Building</span>
+                    <a href="/add_building" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-700 transition-all duration-200 bg-blue-900">
+                        <i class="fas fa-plus-circle w-5 text-center"></i>
+                        <span class="menu-text">Add New Building</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/view_users" class="block bg-green-500 text-white p-3 rounded-lg hover:bg-green-600 flex items-center space-x-2">
-                        👥 <span>View Users</span>
+                    <a href="/view_users" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-green-700 transition-all duration-200 bg-green-900">
+                        <i class="fas fa-users w-5 text-center"></i>
+                        <span class="menu-text">View Users</span>
                     </a>
                 </li>
                 <li>
-                    <a href="/logout" class="block bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 flex items-center space-x-2">
-                        🚪 <span>Logout</span>
+                    <a href="/complaint-reports" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-orange-700 transition-all duration-200 bg-orange-900">
+                        <i class="fas fa-exclamation-circle w-5 text-center"></i>
+                        <span class="menu-text">Complaint Reports</span>
+                    </a>
+                </li>
+                <li class="mt-auto">
+                    <a href="/logout" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-red-700 transition-all duration-200 bg-red-900">
+                        <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                        <span class="menu-text">Logout</span>
                     </a>
                 </li>
             </ul>
+            
+            <div class="mt-6 pt-6 border-t border-gray-700 text-xs text-center text-gray-400 menu-text">
+                <p>Admin Dashboard v1.2</p>
+                <p class="mt-1">© 2023 All Rights Reserved</p>
+            </div>
         </aside>
 
         <!-- Right Section (Available Buildings) -->
-        <main class="w-4/5 p-8">
-            <h2 class="text-3xl font-bold text-gray-800 mb-6">Available Buildings</h2>
+        <main class="main-content flex-1 p-8 bg-gradient-to-br from-gray-50 to-gray-100">
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-5 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Buildings</p>
+                            <h3 class="text-2xl font-bold text-gray-800"><%= buildings.length %></h3>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <i class="fas fa-building text-blue-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-5 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Rooms</p>
+                            <h3 class="text-2xl font-bold text-gray-800">
+                                <%= buildings.reduce((total, building) => total + (building.totalRooms || 0), 0) %>
+                            </h3>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-full">
+                            <i class="fas fa-door-open text-green-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-5 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-600">Occupied Rooms</p>
+                            <h3 class="text-2xl font-bold text-gray-800">
+                                <%= buildings.reduce((total, building) => total + (building.occupiedRooms || 0), 0) %>
+                            </h3>
+                        </div>
+                        <div class="bg-yellow-100 p-3 rounded-full">
+                            <i class="fas fa-users text-yellow-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-5 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-600">Avg Occupancy</p>
+                            <h3 class="text-2xl font-bold text-gray-800">
+                                <% 
+                                    const totalOccupancy = buildings.reduce((total, building) => total + (building.occupancyRate || 0), 0);
+                                    const avgOccupancy = buildings.length > 0 ? Math.round(totalOccupancy / buildings.length) : 0;
+                                %>
+                                <%= avgOccupancy %>%
+                            </h3>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-full">
+                            <i class="fas fa-chart-pie text-red-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Building Portfolio</h2>
+                    <div class="flex space-x-3">
+                        <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                            Total: <span class="font-bold"><%= buildings.length %></span> buildings
+                        </div>
+                        <button class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium hover:bg-blue-200 transition">
+                            <i class="fas fa-filter mr-1"></i> Filter
+                        </button>
+                    </div>
+                </div>
+                
+                <p class="text-gray-600 mt-2">Manage all buildings with real-time occupancy data</p>
+            </div>
 
             <% if (buildings.length === 0) { %>
-                <p class="text-gray-500">No buildings added yet.</p>
+                <div class="bg-white p-10 rounded-xl shadow-md text-center">
+                    <i class="fas fa-building text-5xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">No Buildings Added Yet</h3>
+                    <p class="text-gray-500 mb-6">Get started by adding your first building to the system</p>
+                    <a href="/add_building" class="inline-flex items-center space-x-2 bg-primary text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Add New Building</span>
+                    </a>
+                </div>
             <% } else { %>
-                <div class="grid grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <% buildings.forEach(building => { %>
-                        <a href="/building_overview/<%= building._id %>" class="block transform transition duration-200 hover:scale-105">
-                            <div class="bg-white p-5 shadow-md rounded-lg hover:bg-blue-50 border-l-4 border-blue-600">
-                                <h3 class="text-xl font-semibold text-blue-700"><%= building.building_name %></h3>
-                                <p class="text-gray-600 mt-1">Floors: <span class="font-medium"><%= building.Total_floors %></span></p>
+                        <div class="bg-white p-5 shadow-md rounded-xl hover:shadow-lg transition-all duration-300 card-hover border-t-4 border-primary">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-xl font-semibold text-gray-800"><%= building.building_name %></h3>
+                                <div class="text-xs px-2 py-1 rounded-full font-medium 
+                                    <%= building.occupancyRate >= 80 ? 'bg-red-100 text-red-800' : 
+                                       building.occupancyRate >= 50 ? 'bg-yellow-100 text-yellow-800' : 
+                                       'bg-green-100 text-green-800' %>">
+                                    <%= building.occupancyRate %>%
+                                </div>
                             </div>
-                        </a>
+                            
+                            <!-- Occupancy Progress Bar -->
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span>Occupancy</span>
+                                    <span><%= building.occupiedRooms %>/<%= building.totalRooms %> rooms</span>
+                                </div>
+                                <div class="occupancy-bar">
+                                    <div class="occupancy-fill 
+                                        <%= building.occupancyRate >= 80 ? 'occupancy-high' : 
+                                           building.occupancyRate >= 50 ? 'occupancy-medium' : 
+                                           'occupancy-low' %>" 
+                                        style="width: <%= building.occupancyRate %>%">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-layer-group text-blue-500 mr-2"></i>
+                                    <span class="text-sm"><%= building.Total_floors %> Floors</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-door-open text-blue-500 mr-2"></i>
+                                    <span class="text-sm"><%= building.totalRooms %> Rooms</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-users text-blue-500 mr-2"></i>
+                                    <span class="text-sm"><%= building.occupiedRooms %> Occupied</span>
+                                </div>
+                                <div class="flex items-center text-gray-600">
+                                    <i class="fas fa-bed text-blue-500 mr-2"></i>
+                                    <span class="text-sm"><%= building.totalRooms - building.occupiedRooms %> Available</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center pt-3 border-t border-gray-100">
+                                <a href="/building_overview/<%= building._id %>" class="text-primary hover:text-blue-700 font-medium flex items-center text-sm">
+                                    <span>View Details & Manage</span>
+                                    <i class="fas fa-arrow-right ml-2 text-xs"></i>
+                                </a>
+                                
+                                <div class="flex space-x-2">
+                                    <button class="text-gray-500 hover:text-blue-500 transition" title="Edit Building">
+                                        <i class="fas fa-edit text-sm"></i>
+                                    </button>
+                                    <button class="text-gray-500 hover:text-red-500 transition" title="Delete Building">
+                                        <i class="fas fa-trash text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     <% }); %>
                 </div>
             <% } %>
         </main>
     </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white p-4 text-center text-sm">
+        <p>© 2023 Building Management System | Admin Dashboard</p>
+        <p class="text-xs text-gray-400 mt-1">Real-time occupancy data updated: <%= new Date().toLocaleTimeString() %></p>
+    </footer>
 
 </body>
 </html>

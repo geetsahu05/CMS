@@ -9,6 +9,14 @@ const passport = require('passport');
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 require("dotenv").config();
 
+//Testing
+const Complaint = require('./models/complaint');
+const multer = require('multer');
+
+
+
+
+
 const AdminModel = require("./models/admin")
 const BCModel = require("./models/BC")
 const teacherModel = require("./models/teacher")
@@ -22,6 +30,8 @@ app.set("view engine", "ejs");
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 app.use(cookieParser());
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 
 const session = require("express-session");
@@ -471,7 +481,35 @@ app.post("/login_admin", async (req, res) => {
 });
 
 
-app.get("/adminDash", admin_authMiddleware , async (req, res) => { //testing point
+// app.get("/adminDash", admin_authMiddleware , async (req, res) => { //testing point
+//     try {
+//         if (!req.user) {
+//             return res.redirect('/login_admin');
+//         }
+
+//         // Find the admin in the database
+//         let admin = await AdminModel.findOne({ email: req.user.email });
+
+//         if (!admin) {
+//             return res.redirect('/login_admin'); // If admin not found, redirect to login
+//         }
+
+//         // Fetch all buildings
+//         let buildings = await buildingModel.find();
+
+//         // Render the admin dashboard with admin details and buildings
+//         res.render("adminDash", { 
+//             admin: { name: admin.name, email: admin.email },
+//             buildings
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching admin dashboard:", error);
+//         res.status(500).send("Server Error");
+//     }
+// });
+
+app.get("/adminDash", admin_authMiddleware, async (req, res) => {
     try {
         if (!req.user) {
             return res.redirect('/login_admin');
@@ -481,16 +519,45 @@ app.get("/adminDash", admin_authMiddleware , async (req, res) => { //testing poi
         let admin = await AdminModel.findOne({ email: req.user.email });
 
         if (!admin) {
-            return res.redirect('/login_admin'); // If admin not found, redirect to login
+            return res.redirect('/login_admin');
         }
 
-        // Fetch all buildings
-        let buildings = await buildingModel.find();
+        // Fetch all buildings with populated floors and rooms
+        let buildings = await buildingModel.find()
+            .populate({
+                path: "floors",
+                populate: {
+                    path: "rooms"
+                }
+            });
 
-        // Render the admin dashboard with admin details and buildings
+        // Calculate occupancy for each building
+        const buildingsWithOccupancy = buildings.map(building => {
+            let totalRooms = 0;
+            let occupiedRooms = 0;
+
+            // Calculate occupancy for this building
+            building.floors.forEach(floor => {
+                totalRooms += floor.rooms.length;
+                occupiedRooms += floor.rooms.filter(room => 
+                    room.booking_status === "Booked" || room.assigned_teacher
+                ).length;
+            });
+
+            const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+
+            return {
+                ...building.toObject(),
+                totalRooms,
+                occupiedRooms,
+                occupancyRate
+            };
+        });
+
+        // Render the admin dashboard with calculated data
         res.render("adminDash", { 
             admin: { name: admin.name, email: admin.email },
-            buildings
+            buildings: buildingsWithOccupancy
         });
 
     } catch (error) {
@@ -713,7 +780,8 @@ app.put("/freeRooms", async (req, res) => {
             })
         ));
 
-        res.redirect("/BC_dasboard");
+        // Return JSON response instead of redirect for AJAX calls
+        res.json({ success: true, message: "Rooms freed successfully" });
 
     } catch (error) {
         console.error("Error freeing rooms:", error);
@@ -847,9 +915,46 @@ app.post("/bookRoomFromQR", teacher_authMiddleware, async (req, res) => {
     }
 });
 
+// app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) => {
+//     try {
+//         const teacherId = req.user.id;
+
+//         // Fetch rooms booked by the teacher and populate floor & building details
+//         const bookedRooms = await roomModel
+//             .find({ "Booked_by.userId": teacherId })
+//             .populate({
+//                 path: "floor_id",
+//                 populate: {
+//                     path: "building_id"
+//                 }
+//             });
+
+//         // Fetch rooms the teacher is attending and populate floor & building details
+//         const attendingRooms = await roomModel
+//             .find({ assigned_teacher: teacherId })
+//             .populate({
+//                 path: "floor_id",
+//                 populate: {
+//                     path: "building_id"
+//                 }
+//             });
+
+//         res.render("teacherDash2", { bookedRooms, attendingRooms });
+//     } catch (error) {
+//         console.error("Error fetching teacher dashboard:", error);
+//         res.status(500).send("Server Error");
+//     }
+// });
+
 app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) => {
     try {
         const teacherId = req.user.id;
+
+        // Fetch the current teacher details
+        const currentTeacher = await teacherModel.findById(teacherId);
+        if (!currentTeacher) {
+            return res.status(404).send("Teacher not found");
+        }
 
         // Fetch rooms booked by the teacher and populate floor & building details
         const bookedRooms = await roomModel
@@ -871,14 +976,16 @@ app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) =
                 }
             });
 
-        res.render("teacherDash2", { bookedRooms, attendingRooms });
+        res.render("teacherDash2", { 
+            bookedRooms, 
+            attendingRooms,
+            currentTeacher // Make sure this is passed to the template
+        });
     } catch (error) {
         console.error("Error fetching teacher dashboard:", error);
         res.status(500).send("Server Error");
     }
 });
-
-
 
 app.post("/freeClassroom", teacher_authMiddleware, async (req, res) => {
     try {
@@ -902,6 +1009,345 @@ app.post("/freeClassroom", teacher_authMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
+
+
+//Testing........
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
+
+// Submit a complaint with buffer storage
+app.post('/complaint', teacher_authMiddleware, upload.array('images', 3), async (req, res) => {
+  try {
+    const { roomId, roomNumber, category, description, priority } = req.body;
+    
+    // Validate required fields
+    if (!roomId || !roomNumber || !category || !description) {
+      return res.status(400).render('complaintForm', {
+        roomId: roomId,
+        roomNumber: roomNumber,
+        error: "All required fields must be filled out."
+      });
+    }
+    
+    // Prepare image data
+    const imageData = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        imageData.push({
+          data: file.buffer,
+          contentType: file.mimetype,
+          originalName: file.originalname
+        });
+      }
+    }
+    
+    // Create new complaint
+    const complaint = new Complaint({
+      roomId,
+      roomNumber,
+      teacherId: req.user.id,
+      teacherEmail: req.user.email,
+      category,
+      description,
+      priority: priority || 'Medium',
+      images: imageData
+    });
+    
+    await complaint.save();
+    res.redirect('/complaint-success');
+    
+  } catch (error) {
+    console.error("Complaint submission error:", error);
+    
+    // Check if it's a validation error
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).render('complaintForm', {
+        roomId: req.body.roomId,
+        roomNumber: req.body.roomNumber,
+        error: errors.join(', ')
+      });
+    }
+    
+    res.status(500).render('complaintForm', {
+      roomId: req.body.roomId,
+      roomNumber: req.body.roomNumber,
+      error: "Server error. Please try again later."
+    });
+  }
+});
+
+// Serve complaint images from Buffer
+app.get('/complaint-image/:complaintId/:imageIndex', async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.complaintId);
+    if (!complaint || !complaint.images[req.params.imageIndex]) {
+      return res.status(404).send('Image not found');
+    }
+    
+    const image = complaint.images[req.params.imageIndex];
+    res.set('Content-Type', image.contentType);
+    res.send(image.data);
+  } catch (error) {
+    console.error("Error serving image:", error);
+    res.status(500).send('Error retrieving image');
+  }
+});
+
+// Get all complaints for a teacher
+app.get('/my-complaints', teacher_authMiddleware, async (req, res) => {
+  try {
+    const complaints = await Complaint.find({ teacherId: req.user.id })
+      .sort({ createdAt: -1 });
+    
+    res.render('myComplaints', { complaints });
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Get complaint page with room info
+app.get('/complaint/:roomId', teacher_authMiddleware, async (req, res) => {
+  try {
+    const room = await roomModel.findById(req.params.roomId);
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+    
+    res.render('complaintForm', { 
+      roomId: req.params.roomId, 
+      roomNumber: room.room_Number,
+      teacherId: req.user.id,
+      teacherEmail: req.user.email,
+      error: req.query.error || null
+    });
+  } catch (error) {
+    console.error("Error loading complaint form:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Success page after complaint submission
+app.get('/complaint-success', (req, res) => {
+  res.render('complaintSuccess');
+});
+
+
+
+// Admin Complaint Routes
+
+// Get all complaints (admin view) - UPDATED VERSION
+app.get('/admin/complaints', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const status = req.query.status || 'all';
+        const priority = req.query.priority || 'all';
+        const category = req.query.category || 'all';
+        
+        // Build filter object
+        let filter = {};
+        if (status !== 'all') filter.status = status;
+        if (priority !== 'all') filter.priority = priority;
+        if (category !== 'all') filter.category = category;
+        
+        // Use populate with correct model names (now lowercase)
+        let complaints = await Complaint.find(filter)
+            .populate('roomId', 'room_Number') // Now references 'room' correctly
+            .populate('teacherId', 'name email')
+            .sort({ createdAt: -1 })
+            .limit(limit)
+            .skip((page - 1) * limit);
+            
+        const totalComplaints = await Complaint.countDocuments(filter);
+        const totalPages = Math.ceil(totalComplaints / limit);
+        
+        // Get statistics for dashboard
+        const complaintStats = await Complaint.aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+        
+        const priorityStats = await Complaint.aggregate([
+            {
+                $group: {
+                    _id: '$priority',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+        
+        res.render('adminComplaints', {
+            complaints,
+            currentPage: page,
+            totalPages,
+            totalComplaints,
+            filters: { status, priority, category },
+            stats: {
+                byStatus: complaintStats,
+                byPriority: priorityStats
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching complaints:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// Get single complaint details - UPDATED VERSION
+app.get('/admin/complaints/:id', admin_authMiddleware, async (req, res) => {
+    try {
+        const complaint = await Complaint.findById(req.params.id)
+            .populate('roomId', 'room_Number') // Now references 'room' correctly
+            .populate('teacherId', 'name email phone');
+            
+        if (!complaint) {
+            return res.status(404).json({ message: "Complaint not found" });
+        }
+        
+        res.json(complaint);
+    } catch (error) {
+        console.error("Error fetching complaint:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// Update complaint status
+app.put('/admin/complaints/:id/status', admin_authMiddleware, async (req, res) => {
+    try {
+        const { status, adminNotes } = req.body;
+        
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { 
+                status,
+                adminNotes: adminNotes || undefined,
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+        
+        if (!complaint) {
+            return res.status(404).json({ message: "Complaint not found" });
+        }
+        
+        res.json({ message: "Status updated successfully", complaint });
+    } catch (error) {
+        console.error("Error updating complaint:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// Add note to complaint
+app.post('/admin/complaints/:id/notes', admin_authMiddleware, async (req, res) => {
+    try {
+        const { note } = req.body;
+        
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { 
+                $push: { 
+                    adminNotes: {
+                        note,
+                        addedBy: req.user.id,
+                        addedAt: new Date()
+                    }
+                },
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+        
+        if (!complaint) {
+            return res.status(404).json({ message: "Complaint not found" });
+        }
+        
+        res.json({ message: "Note added successfully", complaint });
+    } catch (error) {
+        console.error("Error adding note:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// Delete complaint
+app.delete('/admin/complaints/:id', admin_authMiddleware, async (req, res) => {
+    try {
+        const complaint = await Complaint.findByIdAndDelete(req.params.id);
+        
+        if (!complaint) {
+            return res.status(404).json({ message: "Complaint not found" });
+        }
+        
+        res.json({ message: "Complaint deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting complaint:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+// Get complaint statistics
+app.get('/admin/complaints-stats', admin_authMiddleware, async (req, res) => {
+    try {
+        const stats = await Complaint.aggregate([
+            {
+                $facet: {
+                    statusCounts: [
+                        { $group: { _id: '$status', count: { $sum: 1 } } }
+                    ],
+                    priorityCounts: [
+                        { $group: { _id: '$priority', count: { $sum: 1 } } }
+                    ],
+                    categoryCounts: [
+                        { $group: { _id: '$category', count: { $sum: 1 } } }
+                    ],
+                    monthlyCounts: [
+                        {
+                            $group: {
+                                _id: {
+                                    year: { $year: '$createdAt' },
+                                    month: { $month: '$createdAt' }
+                                },
+                                count: { $sum: 1 }
+                            }
+                        },
+                        { $sort: { '_id.year': -1, '_id.month': -1 } },
+                        { $limit: 6 }
+                    ]
+                }
+            }
+        ]);
+        
+        res.json(stats[0]);
+    } catch (error) {
+        console.error("Error fetching stats:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

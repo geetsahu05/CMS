@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaint Management | Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .stats-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .complaint-card {
+            transition: all 0.2s ease;
+            border-left: 4px solid;
+        }
+        
+        .complaint-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+        }
+        
+        .priority-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+        }
+        
+        .modal {
+            transition: all 0.3s ease;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <a href="/adminDash" class="bg-white/20 p-2 rounded-lg hover:bg-white/30 transition">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold">Complaint Management</h1>
+                    <p class="text-sm text-blue-100">Manage and resolve room complaints</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm bg-blue-500 px-3 py-1 rounded-full">
+                    <i class="fas fa-user-cog mr-1"></i> Admin
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="stats-card bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-600">Total Complaints</p>
+                        <h3 class="text-2xl font-bold text-gray-800"><%= totalComplaints %></h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-circle text-blue-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dynamic Stats from Backend -->
+            <% stats.byStatus.forEach(stat => { %>
+                <div class="stats-card bg-white p-6 rounded-lg shadow-sm border-l-4 
+                    <% if (stat._id === 'Pending') { %>border-yellow-500<% } %>
+                    <% if (stat._id === 'In Progress') { %>border-blue-500<% } %>
+                    <% if (stat._id === 'Resolved') { %>border-green-500<% } %>
+                    <% if (stat._id === 'Closed') { %>border-gray-500<% } %>">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm text-gray-600"><%= stat._id %></p>
+                            <h3 class="text-2xl font-bold text-gray-800"><%= stat.count %></h3>
+                        </div>
+                        <div class="p-3 rounded-full 
+                            <% if (stat._id === 'Pending') { %>bg-yellow-100<% } %>
+                            <% if (stat._id === 'In Progress') { %>bg-blue-100<% } %>
+                            <% if (stat._id === 'Resolved') { %>bg-green-100<% } %>
+                            <% if (stat._id === 'Closed') { %>bg-gray-100<% } %>">
+                            <i class="fas 
+                                <% if (stat._id === 'Pending') { %>fa-clock text-yellow-500<% } %>
+                                <% if (stat._id === 'In Progress') { %>fa-cog text-blue-500<% } %>
+                                <% if (stat._id === 'Resolved') { %>fa-check-circle text-green-500<% } %>
+                                <% if (stat._id === 'Closed') { %>fa-times-circle text-gray-500<% } %>
+                                text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+        <!-- Filters and Actions -->
+        <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <h2 class="text-xl font-semibold text-gray-800">All Complaints</h2>
+                
+                <div class="flex flex-wrap gap-4">
+                    <!-- Status Filter -->
+                    <select id="statusFilter" class="border rounded-lg px-3 py-2 text-sm">
+                        <option value="all" <%= filters.status === 'all' ? 'selected' : '' %>>All Statuses</option>
+                        <option value="Pending" <%= filters.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                        <option value="In Progress" <%= filters.status === 'In Progress' ? 'selected' : '' %>>In Progress</option>
+                        <option value="Resolved" <%= filters.status === 'Resolved' ? 'selected' : '' %>>Resolved</option>
+                        <option value="Closed" <%= filters.status === 'Closed' ? 'selected' : '' %>>Closed</option>
+                    </select>
+                    
+                    <!-- Priority Filter -->
+                    <select id="priorityFilter" class="border rounded-lg px-3 py-2 text-sm">
+                        <option value="all" <%= filters.priority === 'all' ? 'selected' : '' %>>All Priorities</option>
+                        <option value="Low" <%= filters.priority === 'Low' ? 'selected' : '' %>>Low</option>
+                        <option value="Medium" <%= filters.priority === 'Medium' ? 'selected' : '' %>>Medium</option>
+                        <option value="High" <%= filters.priority === 'High' ? 'selected' : '' %>>High</option>
+                        <option value="Critical" <%= filters.priority === 'Critical' ? 'selected' : '' %>>Critical</option>
+                    </select>
+                    
+                    <!-- Category Filter -->
+                    <select id="categoryFilter" class="border rounded-lg px-3 py-2 text-sm">
+                        <option value="all" <%= filters.category === 'all' ? 'selected' : '' %>>All Categories</option>
+                        <option value="Projector" <%= filters.category === 'Projector' ? 'selected' : '' %>>Projector</option>
+                        <option value="Blackboard" <%= filters.category === 'Blackboard' ? 'selected' : '' %>>Blackboard</option>
+                        <option value="Fan" <%= filters.category === 'Fan' ? 'selected' : '' %>>Fan</option>
+                        <option value="AC" <%= filters.category === 'AC' ? 'selected' : '' %>>AC</option>
+                        <option value="Cleanliness" <%= filters.category === 'Cleanliness' ? 'selected' : '' %>>Cleanliness</option>
+                        <option value="Furniture" <%= filters.category === 'Furniture' ? 'selected' : '' %>>Furniture</option>
+                        <option value="Electrical" <%= filters.category === 'Electrical' ? 'selected' : '' %>>Electrical</option>
+                        <option value="Other" <%= filters.category === 'Other' ? 'selected' : '' %>>Other</option>
+                    </select>
+                    
+                    <button onclick="applyFilters()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                        <i class="fas fa-filter mr-1"></i> Apply Filters
+                    </button>
+                    
+                    <button onclick="exportComplaints()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm">
+                        <i class="fas fa-download mr-1"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complaints List -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <% if (complaints.length === 0) { %>
+                <div class="text-center py-12">
+                    <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-600">No complaints found</h3>
+                    <p class="text-gray-500">Try adjusting your filters or check back later.</p>
+                </div>
+            <% } else { %>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room & Category</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <% complaints.forEach(complaint => { %>
+                                <tr class="hover:bg-gray-50 complaint-card
+                                    <% if (complaint.priority === 'Critical') { %>border-l-red-500<% } %>
+                                    <% if (complaint.priority === 'High') { %>border-l-orange-500<% } %>
+                                    <% if (complaint.priority === 'Medium') { %>border-l-yellow-500<% } %>
+                                    <% if (complaint.priority === 'Low') { %>border-l-green-500<% } %>">
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-medium text-gray-900">#<%= complaint._id.toString().slice(-6) %></div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            <% if (complaint.roomId && complaint.roomId.room_Number) { %>
+                                                Room <%= complaint.roomId.room_Number %>
+                                            <% } else { %>
+                                                <%= complaint.roomNumber %>
+                                            <% } %>
+                                        </div>
+                                        <div class="text-sm text-gray-500"><%= complaint.category %></div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            <%= complaint.teacherId ? complaint.teacherId.name : 'Unknown Teacher' %>
+                                        </div>
+                                        <div class="text-sm text-gray-500"><%= complaint.teacherEmail %></div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4">
+                                        <span class="priority-badge
+                                            <% if (complaint.priority === 'Critical') { %>bg-red-100 text-red-800<% } %>
+                                            <% if (complaint.priority === 'High') { %>bg-orange-100 text-orange-800<% } %>
+                                            <% if (complaint.priority === 'Medium') { %>bg-yellow-100 text-yellow-800<% } %>
+                                            <% if (complaint.priority === 'Low') { %>bg-green-100 text-green-800<% } %>">
+                                            <%= complaint.priority %>
+                                        </span>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4">
+                                        <span class="status-badge
+                                            <% if (complaint.status === 'Pending') { %>bg-yellow-100 text-yellow-800<% } %>
+                                            <% if (complaint.status === 'In Progress') { %>bg-blue-100 text-blue-800<% } %>
+                                            <% if (complaint.status === 'Resolved') { %>bg-green-100 text-green-800<% } %>
+                                            <% if (complaint.status === 'Closed') { %>bg-gray-100 text-gray-800<% } %>">
+                                            <%= complaint.status %>
+                                        </span>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">
+                                            <%= new Date(complaint.createdAt).toLocaleDateString() %>
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            <%= new Date(complaint.createdAt).toLocaleTimeString() %>
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button onclick="viewComplaint('<%= complaint._id %>')" 
+                                            class="text-blue-600 hover:text-blue-900 mr-3" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button onclick="updateStatus('<%= complaint._id %>')" 
+                                            class="text-green-600 hover:text-green-900 mr-3" title="Update Status">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteComplaint('<%= complaint._id %>')" 
+                                            class="text-red-600 hover:text-red-900" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <% if (totalPages > 1) { %>
+                    <div class="bg-white px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                        <div class="text-sm text-gray-700">
+                            Showing page <%= currentPage %> of <%= totalPages %> 
+                            (<%= totalComplaints %> total complaints)
+                        </div>
+                        <div class="flex space-x-2">
+                            <% if (currentPage > 1) { %>
+                                <a href="?page=<%= currentPage - 1 %>&status=<%= filters.status %>&priority=<%= filters.priority %>&category=<%= filters.category %>"
+                                   class="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-200">
+                                    Previous
+                                </a>
+                            <% } %>
+                            
+                            <% for (let i = 1; i <= totalPages; i++) { %>
+                                <a href="?page=<%= i %>&status=<%= filters.status %>&priority=<%= filters.priority %>&category=<%= filters.category %>"
+                                   class="<%= i === currentPage ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700' %> px-3 py-1 rounded-lg hover:bg-blue-100">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+                            
+                            <% if (currentPage < totalPages) { %>
+                                <a href="?page=<%= currentPage + 1 %>&status=<%= filters.status %>&priority=<%= filters.priority %>&category=<%= filters.category %>"
+                                   class="bg-gray-100 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-200">
+                                    Next
+                                </a>
+                            <% } %>
+                        </div>
+                    </div>
+                <% } %>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- View Complaint Modal -->
+    <div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 modal">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3 max-h-90vh overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Complaint Details</h3>
+                    <button onclick="closeModal('viewModal')" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div id="complaintDetails"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Status Modal -->
+    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 modal">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Update Status</h3>
+                    <button onclick="closeModal('statusModal')" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="statusForm">
+                    <input type="hidden" id="complaintId" name="complaintId">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select id="statusSelect" name="status" class="w-full border rounded-lg px-3 py-2" required>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Admin Notes</label>
+                        <textarea id="adminNotes" name="adminNotes" rows="4" 
+                            class="w-full border rounded-lg px-3 py-2" 
+                            placeholder="Add any notes or comments..."></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal('statusModal')" 
+                            class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            Update Status
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Filter functions
+        function applyFilters() {
+            const status = document.getElementById('statusFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+            
+            window.location.href = `/admin/complaints?status=${status}&priority=${priority}&category=${category}`;
+        }
+        
+        // Modal functions
+        function viewComplaint(id) {
+            fetch(`/admin/complaints/${id}`)
+                .then(response => response.json())
+                .then(complaint => {
+                    const detailsDiv = document.getElementById('complaintDetails');
+                    detailsDiv.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500">Complaint Information</h4>
+                                <p class="mt-1 text-sm text-gray-900">
+                                    <strong>ID:</strong> #${complaint._id.toString().slice(-6)}<br>
+                                    <strong>Category:</strong> ${complaint.category}<br>
+                                    <strong>Priority:</strong> 
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        ${complaint.priority === 'Critical' ? 'bg-red-100 text-red-800' : 
+                                          complaint.priority === 'High' ? 'bg-orange-100 text-orange-800' : 
+                                          complaint.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
+                                          'bg-green-100 text-green-800'}">
+                                        ${complaint.priority}
+                                    </span><br>
+                                    <strong>Status:</strong> 
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        ${complaint.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                          complaint.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : 
+                                          complaint.status === 'Resolved' ? 'bg-green-100 text-green-800' : 
+                                          'bg-gray-100 text-gray-800'}">
+                                        ${complaint.status}
+                                    </span>
+                                </p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500">Room Information</h4>
+                                <p class="mt-1 text-sm text-gray-900">
+                                    <strong>Room:</strong> ${complaint.roomId ? complaint.roomId.room_Number : complaint.roomNumber}<br>
+                                    <strong>Reported:</strong> ${new Date(complaint.createdAt).toLocaleString()}<br>
+                                    <strong>Last Updated:</strong> ${new Date(complaint.updatedAt).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="text-sm font-medium text-gray-500">Teacher Information</h4>
+                            <p class="mt-1 text-sm text-gray-900">
+                                <strong>Name:</strong> ${complaint.teacherId ? complaint.teacherId.name : 'Unknown'}<br>
+                                <strong>Email:</strong> ${complaint.teacherEmail}<br>
+                                ${complaint.teacherId && complaint.teacherId.phone ? 
+                                    `<strong>Phone:</strong> ${complaint.teacherId.phone}<br>` : ''}
+                            </p>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="text-sm font-medium text-gray-500">Description</h4>
+                            <p class="mt-1 text-sm text-gray-900 bg-gray-50 p-4 rounded-lg">
+                                ${complaint.description}
+                            </p>
+                        </div>
+                        
+                        ${complaint.images && complaint.images.length > 0 ? `
+                            <div class="mb-6">
+                                <h4 class="text-sm font-medium text-gray-500">Attached Images</h4>
+                                <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    ${complaint.images.map((image, index) => `
+                                        <img src="/complaint-image/${complaint._id}/${index}" 
+                                             alt="Complaint image ${index + 1}" 
+                                             class="w-full h-24 object-cover rounded-lg cursor-pointer"
+                                             onclick="window.open(this.src, '_blank')">
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        ${complaint.adminNotes && complaint.adminNotes.length > 0 ? `
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500">Admin Notes</h4>
+                                <div class="mt-2 space-y-2">
+                                    ${complaint.adminNotes.map(note => `
+                                        <div class="bg-blue-50 p-3 rounded-lg">
+                                            <p class="text-sm text-gray-900">${note.note}</p>
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                Added on ${new Date(note.addedAt).toLocaleString()}
+                                            </p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    `;
+                    document.getElementById('viewModal').classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading complaint details');
+                });
+        }
+        
+        function updateStatus(id) {
+            document.getElementById('complaintId').value = id;
+            document.getElementById('statusModal').classList.remove('hidden');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+        
+        // Form submission
+        document.getElementById('statusForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const complaintId = document.getElementById('complaintId').value;
+            const status = document.getElementById('statusSelect').value;
+            const adminNotes = document.getElementById('adminNotes').value;
+            
+            fetch(`/admin/complaints/${complaintId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status, adminNotes })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Status updated successfully');
+                    closeModal('statusModal');
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating status');
+            });
+        });
+        
+        function deleteComplaint(id) {
+            if (confirm('Are you sure you want to delete this complaint? This action cannot be undone.')) {
+                fetch(`/admin/complaints/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert('Complaint deleted successfully');
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting complaint');
+                });
+            }
+        }
+        
+        function exportComplaints() {
+            // This would typically generate a CSV or PDF report
+            alert('Export functionality would be implemented here');
+        }
+        
+        // Close modals when clicking outside
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'viewModal') closeModal('viewModal');
+            if (e.target.id === 'statusModal') closeModal('statusModal');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Room Issue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-xl font-bold mb-4 text-center">
+            <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i> Report Room Issue
+        </h1>
+        
+        <div class="bg-blue-50 p-3 rounded mb-4">
+            <p class="font-semibold">Room: <span class="font-normal"><%= roomNumber %></span></p>
+        </div>
+        
+        <% if (typeof error !== 'undefined') { %>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <%= error %>
+            </div>
+        <% } %>
+        
+        <form id="complaintForm" action="/complaint" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="roomId" value="<%= roomId %>">
+            <input type="hidden" name="roomNumber" value="<%= roomNumber %>">
+            
+            <div>
+                <label class="block font-semibold">Issue Category <span class="text-red-500">*</span></label>
+                <select name="category" id="category" class="w-full border p-2 rounded" required>
+                    <option value="">Select a category</option>
+                    <option value="Projector">Projector</option>
+                    <option value="Blackboard">Blackboard/Whiteboard</option>
+                    <option value="Fan">Fan</option>
+                    <option value="AC">AC</option>
+                    <option value="Cleanliness">Room Cleanliness</option>
+                    <option value="Furniture">Furniture (Chairs, Tables)</option>
+                    <option value="Electrical">Electrical Issues</option>
+                    <option value="Other">Other</option>
+                </select>
+                <div id="categoryError" class="error-message">Please select a category</div>
+            </div>
+            
+            <div>
+                <label class="block font-semibold">Priority</label>
+                <select name="priority" class="w-full border p-2 rounded">
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical (Urgent)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-semibold">Description <span class="text-red-500">*</span></label>
+                <textarea name="description" id="description" rows="4" class="w-full border p-2 rounded" 
+                          placeholder="Please describe the issue in detail..." required></textarea>
+                <div id="descriptionError" class="error-message">Please provide a description</div>
+            </div>
+            
+            <div>
+                <label class="block font-semibold">Upload Images (Optional)</label>
+                <input type="file" name="images" id="images" multiple accept="image/*" 
+                       class="w-full border p-2 rounded">
+                <p class="text-xs text-gray-500 mt-1">You can upload up to 3 images (Max 5MB each)</p>
+                <div id="fileError" class="error-message"></div>
+                
+                <div id="imagePreview" class="mt-2 grid grid-cols-3 gap-2 hidden">
+                    <!-- Image previews will be added here -->
+                </div>
+            </div>
+
+            <div class="flex space-x-4">
+                <button type="submit" id="submitBtn" class="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 flex items-center justify-center">
+                    <i class="fas fa-paper-plane mr-2"></i> Submit Report
+                    <div id="loadingSpinner" class="loading-spinner ml-2"></div>
+                </button>
+                
+                <a href="/Teacher_dashboard" class="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-600 flex items-center justify-center">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('complaintForm');
+            const categorySelect = document.getElementById('category');
+            const descriptionTextarea = document.getElementById('description');
+            const imagesInput = document.getElementById('images');
+            const submitBtn = document.getElementById('submitBtn');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const imagePreview = document.getElementById('imagePreview');
+            
+            // File input change handler
+            imagesInput.addEventListener('change', function(e) {
+                const files = e.target.files;
+                const fileError = document.getElementById('fileError');
+                
+                // Reset preview and errors
+                imagePreview.innerHTML = '';
+                fileError.style.display = 'none';
+                
+                if (files.length > 3) {
+                    fileError.textContent = 'Maximum 3 images allowed';
+                    fileError.style.display = 'block';
+                    imagesInput.value = '';
+                    return;
+                }
+                
+                // Check each file
+                for (let i = 0; i < files.length; i++) {
+                    if (files[i].size > 5 * 1024 * 1024) {
+                        fileError.textContent = 'File size must be less than 5MB';
+                        fileError.style.display = 'block';
+                        imagesInput.value = '';
+                        return;
+                    }
+                    
+                    // Create preview
+                    if (files[i].type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.className = 'w-full h-20 object-cover rounded';
+                            imagePreview.appendChild(img);
+                        };
+                        reader.readAsDataURL(files[i]);
+                    }
+                }
+                
+                if (files.length > 0) {
+                    imagePreview.classList.remove('hidden');
+                } else {
+                    imagePreview.classList.add('hidden');
+                }
+            });
+            
+            // Form submission handler
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+                
+                // Validate category
+                if (!categorySelect.value) {
+                    document.getElementById('categoryError').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('categoryError').style.display = 'none';
+                }
+                
+                // Validate description
+                if (!descriptionTextarea.value.trim()) {
+                    document.getElementById('descriptionError').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('descriptionError').style.display = 'none';
+                }
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                loadingSpinner.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>

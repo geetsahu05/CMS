@@ -6,122 +6,281 @@
   <title>Building Overview</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#2563eb',
+            secondary: '#64748b',
+            success: '#22c55e',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+            info: '#3b82f6',
+            dark: '#1e293b',
+            light: '#f8fafc'
+          }
+        }
+      }
+    }
+
     function toggleFloor(floorId) {
       let content = document.getElementById("floor-" + floorId);
+      let icon = document.getElementById("icon-" + floorId);
       content.classList.toggle("hidden");
+      icon.classList.toggle("fa-chevron-down");
+      icon.classList.toggle("fa-chevron-up");
     }
 
     function generateQRCode(roomId) {
       const containerId = "qrcode-" + roomId;
       const container = document.getElementById(containerId);
+      const button = document.getElementById("btn-" + roomId);
       
       // Clear previous QR if exists
       container.innerHTML = "";
 
-      // Encode the room ID or a full URL
-      const qrValue = `https://cms-wgmv.vercel.app/QRgenerateroom/${roomId}`;
+      // Toggle QR code visibility
+      if (container.classList.contains("hidden")) {
+        container.classList.remove("hidden");
+        button.innerHTML = '<i class="fas fa-times mr-1"></i> Hide QR';
+        button.classList.remove("bg-blue-600", "hover:bg-blue-700");
+        button.classList.add("bg-gray-600", "hover:bg-gray-700");
+        
+        // Encode the room ID or a full URL
+        const qrValue = `https://cms-wgmv.vercel.app/QRgenerateroom/${roomId}`;
 
-      new QRCode(container, {
-        text: qrValue,
-        width: 128,
-        height: 128,
-        colorDark: "#000",
-        colorLight: "#fff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
+        new QRCode(container, {
+          text: qrValue,
+          width: 128,
+          height: 128,
+          colorDark: "#000",
+          colorLight: "#fff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } else {
+        container.classList.add("hidden");
+        button.innerHTML = '<i class="fas fa-qrcode mr-1"></i> Generate QR';
+        button.classList.remove("bg-gray-600", "hover:bg-gray-700");
+        button.classList.add("bg-blue-600", "hover:bg-blue-700");
+      }
     }
+
+    // Expand first floor by default on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      <% if (building.floors.length > 0) { %>
+        toggleFloor('<%= building.floors[0]._id %>');
+      <% } %>
+    });
   </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .room-card {
+      transition: all 0.2s ease;
+    }
+    
+    .room-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .floor-header {
+      transition: background-color 0.2s ease;
+    }
+    
+    .floor-header:hover {
+      background-color: #dbeafe;
+    }
+  </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
 
   <!-- Header -->
-  <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold"><%= building.building_name %> Overview</h1>
-    <a href="/adminDash" class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition">
-      ⬅ Back to Dashboard
+  <header class="bg-gradient-to-r from-primary to-blue-700 text-white p-4 flex justify-between items-center shadow-md">
+    <div class="flex items-center space-x-3">
+      <div class="bg-white/20 p-2 rounded-lg">
+        <i class="fas fa-building text-xl"></i>
+      </div>
+      <h1 class="text-xl font-bold"><%= building.building_name %> Overview</h1>
+    </div>
+    <a href="/adminDash" class="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition flex items-center space-x-2">
+      <i class="fas fa-arrow-left"></i>
+      <span>Back to Dashboard</span>
     </a>
   </header>
 
   <!-- Main Container -->
-  <div class="max-w-4xl mx-auto mt-8 p-6 bg-white shadow-lg rounded-lg">
+  <div class="max-w-6xl mx-auto mt-8 p-6 bg-white shadow-lg rounded-xl">
 
     <!-- Building Details -->
-    <div class="mb-6">
-      <h2 class="text-2xl font-semibold text-blue-700"><%= building.building_name %></h2>
-      <p class="text-gray-600 mt-1">Total Floors: <span class="font-medium"><%= building.Total_floors %></span></p>
-      <% if (building.address) { %>
-        <p class="text-gray-600">Address: <span class="font-medium"><%= building.address %></span></p>
-      <% } %>
+    <div class="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-3xl font-bold text-blue-800"><%= building.building_name %></h2>
+          <div class="flex flex-wrap gap-4 mt-3">
+            <div class="flex items-center text-gray-700">
+              <i class="fas fa-layer-group text-blue-500 mr-2"></i>
+              <span>Floors: <span class="font-semibold"><%= building.Total_floors %></span></span>
+            </div>
+            <% if (building.address) { %>
+              <div class="flex items-center text-gray-700">
+                <i class="fas fa-map-marker-alt text-blue-500 mr-2"></i>
+                <span>Address: <span class="font-semibold"><%= building.address %></span></span>
+              </div>
+            <% } %>
+            <div class="flex items-center text-gray-700">
+              <i class="fas fa-door-open text-blue-500 mr-2"></i>
+              <%
+                let totalRooms = 0;
+                building.floors.forEach(floor => {
+                  totalRooms += floor.rooms.length;
+                });
+              %>
+              <span>Total Rooms: <span class="font-semibold"><%= totalRooms %></span></span>
+            </div>
+          </div>
+        </div>
+        <div class="hidden md:block bg-blue-100 p-4 rounded-lg">
+          <i class="fas fa-building text-blue-500 text-4xl"></i>
+        </div>
+      </div>
     </div>
 
     <!-- Legend -->
-    <div class="mb-4 flex space-x-4">
-      <div class="flex items-center space-x-2">
-        <div class="w-4 h-4 bg-green-200 rounded"></div>
-        <span class="text-sm text-gray-700">Available</span>
-      </div>
-      <div class="flex items-center space-x-2">
-        <div class="w-4 h-4 bg-yellow-200 rounded"></div>
-        <span class="text-sm text-gray-700">Booked with Teacher</span>
-      </div>
-      <div class="flex items-center space-x-2">
-        <div class="w-4 h-4 bg-red-200 rounded"></div>
-        <span class="text-sm text-gray-700">Booked without Teacher</span>
+    <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">Room Status Legend</h3>
+      <div class="flex flex-wrap gap-4">
+        <div class="flex items-center space-x-2">
+          <div class="w-4 h-4 bg-green-300 rounded"></div>
+          <span class="text-sm text-gray-700">Available</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <div class="w-4 h-4 bg-yellow-300 rounded"></div>
+          <span class="text-sm text-gray-700">Booked with Teacher</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <div class="w-4 h-4 bg-red-300 rounded"></div>
+          <span class="text-sm text-gray-700">Booked without Teacher</span>
+        </div>
       </div>
     </div>
 
     <!-- Floors Section -->
-    <h3 class="text-xl font-bold text-gray-800 mb-4">Floors</h3>
+    <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+      <i class="fas fa-layer-group text-blue-500 mr-3"></i>
+      <span>Floors Overview</span>
+    </h3>
+    
     <div class="space-y-4">
       <% building.floors.forEach(floor => { %>
         <!-- Floor Card -->
-        <div class="bg-blue-100 p-4 shadow-md rounded-lg">
-          <button onclick="toggleFloor('<%= floor._id %>')" class="w-full text-left flex justify-between items-center">
-            <h4 class="text-lg font-semibold text-blue-800">Floor <%= floor.floor_Number %></h4>
-            <span class="text-gray-700">Rooms: <%= floor.rooms.length %></span>
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <button onclick="toggleFloor('<%= floor._id %>')" class="w-full text-left flex justify-between items-center p-5 floor-header">
+            <div class="flex items-center space-x-4">
+              <div class="bg-blue-100 text-blue-800 p-2 rounded-lg">
+                <i class="fas fa-layer-group"></i>
+              </div>
+              <div>
+                <h4 class="text-lg font-semibold text-gray-800">Floor <%= floor.floor_Number %></h4>
+                <p class="text-sm text-gray-600"><%= floor.rooms.length %> room(s)</p>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <span class="text-sm text-gray-600 mr-3">Click to <%= floor.rooms.length > 0 ? 'expand' : 'view' %></span>
+              <i id="icon-<%= floor._id %>" class="fas fa-chevron-down text-gray-500"></i>
+            </div>
           </button>
 
           <!-- Room List (Initially Hidden) -->
-          <div id="floor-<%= floor._id %>" class="hidden mt-4 bg-white p-4 rounded shadow-md">
-            <% if (floor.rooms.length > 0) { %>
-              <div class="grid grid-cols-3 gap-4">
-                <% floor.rooms.forEach(room => { %>
-                  <% 
-                    let bgColor = "bg-green-200"; // Available by default
-                    if (room.booking_status === "Booked") {
-                      if (room.assigned_teacher) {
-                        bgColor = "bg-yellow-200"; // Booked with teacher
-                      } else {
-                        bgColor = "bg-red-200"; // Booked without teacher
+          <div id="floor-<%= floor._id %>" class="hidden border-t border-gray-200">
+            <div class="p-5 bg-gray-50">
+              <% if (floor.rooms.length > 0) { %>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  <% floor.rooms.forEach(room => { %>
+                    <% 
+                      let bgColor = "bg-green-100 border-green-200"; // Available by default
+                      let statusText = "Available";
+                      
+                      if (room.booking_status === "Booked") {
+                        if (room.assigned_teacher) {
+                          bgColor = "bg-yellow-100 border-yellow-200";
+                          statusText = "Booked with Teacher";
+                        } else {
+                          bgColor = "bg-red-100 border-red-200";
+                          statusText = "Booked without Teacher";
+                        }
                       }
-                    }
-                  %>
-                  <div class="border p-3 rounded-lg shadow-md <%= bgColor %>">
-                    <h5 class="text-md font-semibold text-gray-800">Room <%= room.room_Number %></h5>
-                    <p class="text-sm text-gray-600">Status: <%= room.booking_status %></p>
-                    <p class="text-sm text-gray-600">By: <%= room.Booked_by.userEmail %></p>
-                    <p class="text-sm text-gray-600">Branch: <%= room.branch %></p>
-                    <p class="text-sm text-gray-600">Batch: <%= room.batch %></p>
+                    %>
+                    <div class="room-card border rounded-lg p-4 shadow-sm <%= bgColor %>">
+                      <div class="flex justify-between items-start mb-3">
+                        <h5 class="text-lg font-semibold text-gray-800">Room <%= room.room_Number %></h5>
+                        <span class="text-xs font-medium px-2 py-1 rounded-full 
+                          <%= room.booking_status === 'Booked' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' %>">
+                          <%= room.booking_status %>
+                        </span>
+                      </div>
+                      
+                      <div class="space-y-2 text-sm text-gray-600">
+                        <div class="flex items-center">
+                          <i class="fas fa-info-circle text-blue-500 mr-2 w-4"></i>
+                          <span>Status: <%= statusText %></span>
+                        </div>
+                        <% if (room.booking_status === "Booked") { %>
+                          <div class="flex items-center">
+                            <i class="fas fa-user text-blue-500 mr-2 w-4"></i>
+                            <span>By: <%= room.Booked_by.userEmail %></span>
+                          </div>
+                        <% } %>
+                        <% if (room.branch) { %>
+                          <div class="flex items-center">
+                            <i class="fas fa-code-branch text-blue-500 mr-2 w-4"></i>
+                            <span>Branch: <%= room.branch %></span>
+                          </div>
+                        <% } %>
+                        <% if (room.batch) { %>
+                          <div class="flex items-center">
+                            <i class="fas fa-users text-blue-500 mr-2 w-4"></i>
+                            <span>Batch: <%= room.batch %></span>
+                          </div>
+                        <% } %>
+                      </div>
 
-                    <!-- Generate QR Button -->
-                    <button onclick="generateQRCode('<%= room._id %>')" class="mt-2 text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-                      Generate QR
-                    </button>
+                      <!-- Generate QR Button -->
+                      <div class="mt-4">
+                        <button id="btn-<%= room._id %>" onclick="generateQRCode('<%= room._id %>')" 
+                          class="w-full text-sm px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
+                          <i class="fas fa-qrcode mr-1"></i> Generate QR
+                        </button>
 
-                    <!-- QR Code Display -->
-                    <div id="qrcode-<%= room._id %>" class="mt-2"></div>
-                  </div>
-                <% }); %>
-              </div>
-            <% } else { %>
-              <p class="text-gray-500">No rooms available on this floor.</p>
-            <% } %>
+                        <!-- QR Code Display -->
+                        <div id="qrcode-<%= room._id %>" class="hidden mt-3 flex justify-center"></div>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              <% } else { %>
+                <div class="text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">
+                  <i class="fas fa-door-open text-gray-300 text-4xl mb-3"></i>
+                  <p class="text-gray-500">No rooms available on this floor.</p>
+                </div>
+              <% } %>
+            </div>
           </div>
         </div>
       <% }); %>
     </div>
   </div>
+
+  <!-- Footer -->
+  <footer class="mt-10 bg-gray-800 text-white text-center p-4 text-sm">
+    <p>© 2023 Building Management System | <%= building.building_name %> Overview</p>
+  </footer>
 
 </body>
 </html>

@@ -20,7 +20,7 @@
         </div>
 
         <!-- Room Selection -->
-        <div id="roomSection" class="hidden mt-6">
+        <div id="roomSection" class="hidden mt-6" data-selected-room="">
             <h3 class="text-xl font-semibold text-gray-700 mb-4">Select a Room:</h3>
             <div id="roomContainer" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
 
@@ -96,6 +96,7 @@
 
         roomContainer.innerHTML = "";  
         roomSection.classList.remove("hidden");
+        roomSection.setAttribute("data-selected-room", ""); // reset selection
 
         try {
             let response = await fetch(`/availableRooms/${floorId}`);
@@ -106,15 +107,28 @@
             }
 
             data.rooms.forEach(room => {
+                let isEmpty = !room.Booked_by?.userEmail && !room.branch && !room.batch;
                 let roomCard = document.createElement("div");
-                roomCard.className = "bg-blue-100 shadow-md rounded-lg p-4 cursor-pointer hover:shadow-lg transition";
+
+                roomCard.className = "room-card shadow-md rounded-lg p-4 transition " + 
+                                     (isEmpty 
+                                        ? "bg-gray-200 cursor-not-allowed opacity-60" 
+                                        : "bg-blue-100 cursor-pointer hover:shadow-lg");
+
+                roomCard.setAttribute("data-room-id", room._id);
+
                 roomCard.innerHTML = `
                     <h3 class="text-md font-semibold text-gray-900">Room ${room.room_Number}</h3>
-                    <p class="text-sm text-gray-700"><strong>Booked By:</strong> ${room.Booked_by.userEmail || "N/A"}</p>
+                    <p class="text-sm text-gray-700"><strong>Booked By:</strong> ${room.Booked_by?.userEmail || "N/A"}</p>
                     <p class="text-sm text-gray-700"><strong>Branch:</strong> ${room.branch || "N/A"}</p>
                     <p class="text-sm text-gray-700"><strong>Batch:</strong> ${room.batch || "N/A"}</p>
                 `;
-                roomCard.onclick = () => selectRoom(room._id);
+
+                // Only allow clicking if not empty
+                if (!isEmpty) {
+                    roomCard.addEventListener("click", () => toggleRoomSelection(room._id, roomCard));
+                }
+
                 roomContainer.appendChild(roomCard);
             });
         } catch (error) {
@@ -122,18 +136,44 @@
         }
     }
 
-    function selectRoom(roomId) {
-        document.getElementById("roomSection").setAttribute("data-selected-room", roomId);
+    function toggleRoomSelection(roomId, roomCard) {
+        const roomSection = document.getElementById("roomSection");
+        const currentlySelected = roomSection.getAttribute("data-selected-room");
+
+        // If clicking the same room → deselect
+        if (currentlySelected === roomId) {
+            roomSection.setAttribute("data-selected-room", "");
+            roomCard.classList.remove("bg-green-300");
+            roomCard.classList.add("bg-blue-100");
+            return;
+        }
+
+        // Deselect previously selected room
+        document.querySelectorAll(".room-card").forEach(card => {
+            card.classList.remove("bg-green-300");
+            if (!card.classList.contains("cursor-not-allowed")) {
+                card.classList.add("bg-blue-100");
+            }
+        });
+
+        // Select new room
+        roomSection.setAttribute("data-selected-room", roomId);
+        roomCard.classList.remove("bg-blue-100");
+        roomCard.classList.add("bg-green-300");
     }
 
     async function bookRoom() {
         const roomId = document.getElementById("roomSection").getAttribute("data-selected-room");
         const from_time = document.getElementById("fromTime").value;
         const to_time = document.getElementById("toTime").value;
-        const teacherId = "<%= teacher %>";
-        
+        const teacherId = "<%= teacher %>"; // from backend
 
-        if (!roomId || !from_time || !to_time || !teacherId || teacherId.trim() === '') {
+        if (!roomId) {
+            alert("Please select a room before booking.");
+            return;
+        }
+
+        if (!from_time || !to_time || !teacherId || teacherId.trim() === '') {
             alert("Invalid booking details. Ensure all fields are filled.");
             return;
         }
