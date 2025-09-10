@@ -12,6 +12,7 @@ require("dotenv").config();
 //Testing
 const Complaint = require('./models/complaint');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 
 
 
@@ -52,6 +53,134 @@ app.use(passport.initialize());
 
 
 const SK = process.env.SECRET_KEY
+
+// Email error handling
+process.on('unhandledRejection', (err) => {
+  console.log('Unhandled Rejection:', err);
+  // Don't crash the app on email errors
+});
+
+process.on('uncaughtException', (err) => {
+  console.log('Uncaught Exception:', err);
+  // Don't crash the app on email errors
+});
+
+// Create transporter
+const transporter = nodemailer.createTransport({
+  service: process.env.EMAIL_SERVICE || "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
+
+
+// Function to send booking confirmation email
+async function sendBookingConfirmation(email, bookingDetails, userType) {
+  try {
+    const { roomNumber, from_time, to_time, branch, batch, buildingName, floorNumber } = bookingDetails;
+    
+    // Format dates
+    const startTime = new Date(from_time);
+    const endTime = new Date(to_time);
+    
+    // Create Google Calendar link
+    const calendarLink = createGoogleCalendarLink(bookingDetails);
+    
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: `Room Booking Confirmation - Room ${roomNumber}`,
+      html: generateEmailTemplate(bookingDetails, userType, calendarLink)
+    };
+    
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
+}
+
+// Function to create Google Calendar link
+function createGoogleCalendarLink(bookingDetails) {
+  const { roomNumber, from_time, to_time, branch, batch, buildingName } = bookingDetails;
+  
+  const startTime = new Date(from_time);
+  const endTime = new Date(to_time);
+  
+  // Format dates for Google Calendar (YYYYMMDDTHHmmssZ)
+  const formatDate = (date) => {
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
+  
+  const start = formatDate(startTime);
+  const end = formatDate(endTime);
+  
+  const details = `Room Booking: Room ${roomNumber}, ${buildingName}`;
+  const description = `Room: ${roomNumber}\\nBuilding: ${buildingName}\\nBranch: ${branch}\\nBatch: ${batch}`;
+  
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(details)}&dates=${start}/${end}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(buildingName)}`;
+}
+
+// Function to generate email HTML template
+function generateEmailTemplate(bookingDetails, userType, calendarLink) {
+  const { roomNumber, from_time, to_time, branch, batch, buildingName, floorNumber } = bookingDetails;
+  
+  const startTime = new Date(from_time).toLocaleString();
+  const endTime = new Date(to_time).toLocaleString();
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9fafb; padding: 20px; border-radius: 0 0 10px 10px; }
+        .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Room Booking Confirmation</h1>
+        </div>
+        <div class="content">
+            <p>Hello,</p>
+            <p>Your room booking has been confirmed. Here are your booking details:</p>
+            
+            <div class="details">
+                <h2>Booking Information</h2>
+                <p><strong>Room:</strong> ${roomNumber}</p>
+                <p><strong>Building:</strong> ${buildingName}</p>
+                ${floorNumber ? `<p><strong>Floor:</strong> ${floorNumber}</p>` : ''}
+                <p><strong>Date & Time:</strong> ${startTime} to ${endTime}</p>
+                ${branch ? `<p><strong>Branch:</strong> ${branch}</p>` : ''}
+                ${batch ? `<p><strong>Batch:</strong> ${batch}</p>` : ''}
+                <p><strong>Booked by:</strong> ${userType}</p>
+            </div>
+            
+            <p>Add this event to your calendar:</p>
+            <a href="${calendarLink}" class="button" target="_blank">
+                Add to Google Calendar
+            </a>
+            
+            <p>If you have any questions, please contact the administration.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+}
 
 // Helper to pick model by role string
 const getModelByRole = (role) => {
@@ -688,73 +817,161 @@ app.get('/getRooms/:floorId', async (req, res) => {
     }
 });
 
+// app.post('/bookRooms', bc_authMiddleware, async (req, res) => {
+//     try {
+//         const selectedRooms = JSON.parse(req.body.selectedRooms);
+
+//         console.log(selectedRooms)
+
+//         // Fetch the current user
+//         const currentUser = await BCModel.findOne({ email: req.user.email });
+//         if (!currentUser) {
+//             return res.status(404).json({ error: "User not found" });
+//         }
+
+//         // Update all selected rooms with branch and batch details
+//         await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
+//             roomModel.findByIdAndUpdate(roomId, {
+//                 $set: {
+//                     "Booked_by.userId": currentUser._id,
+//                     "Booked_by.userEmail": currentUser.email,
+//                     "Booked_by.userType": "BC",
+//                     booking_status: "Booked",
+//                     branch: branch || "Not Specified",
+//                     batch: batch || "Not Specified"
+//                 }
+//             })
+//         ));
+
+//         res.redirect("/BC_dashboard");
+//     } catch (error) {
+//         console.error("Error booking rooms:", error);
+//         res.status(500).json({ error: "Error booking rooms" });
+//     }
+// });
+
+// For Batch Coordinator booking
 app.post('/bookRooms', bc_authMiddleware, async (req, res) => {
-    try {
-        const selectedRooms = JSON.parse(req.body.selectedRooms);
-
-        console.log(selectedRooms)
-
-        // Fetch the current user
-        const currentUser = await BCModel.findOne({ email: req.user.email });
-        if (!currentUser) {
-            return res.status(404).json({ error: "User not found" });
+  try {
+    const selectedRooms = JSON.parse(req.body.selectedRooms);
+    const currentUser = await BCModel.findOne({ email: req.user.email });
+    
+    // Your existing booking logic
+    await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
+      roomModel.findByIdAndUpdate(roomId, {
+        $set: {
+          "Booked_by.userId": currentUser._id,
+          "Booked_by.userEmail": currentUser.email,
+          "Booked_by.userType": "BC",
+          booking_status: "Booked",
+          branch: branch || "Not Specified",
+          batch: batch || "Not Specified"
         }
+      })
+    ));
 
-        // Update all selected rooms with branch and batch details
-        await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
-            roomModel.findByIdAndUpdate(roomId, {
-                $set: {
-                    "Booked_by.userId": currentUser._id,
-                    "Booked_by.userEmail": currentUser.email,
-                    "Booked_by.userType": "BC",
-                    booking_status: "Booked",
-                    branch: branch || "Not Specified",
-                    batch: batch || "Not Specified"
-                }
-            })
-        ));
-
-        res.redirect("/BC_dashboard");
-    } catch (error) {
-        console.error("Error booking rooms:", error);
-        res.status(500).json({ error: "Error booking rooms" });
+    // Send email notifications
+    for (const { roomId, branch, batch } of selectedRooms) {
+      const room = await roomModel.findById(roomId).populate('floor_id');
+      const building = await buildingModel.findById(room.floor_id.building_id);
+      
+      const bookingDetails = {
+        roomNumber: room.room_Number,
+        from_time: new Date(), // You might want to adjust this based on your booking time
+        to_time: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours later, adjust as needed
+        branch,
+        batch,
+        buildingName: building.building_name,
+        floorNumber: room.floor_id.floor_Number
+      };
+      
+      await sendBookingConfirmation(currentUser.email, bookingDetails, 'Batch Coordinator');
     }
+
+    res.redirect("/BC_dashboard");
+  } catch (error) {
+    console.error("Error booking rooms:", error);
+    res.status(500).json({ error: "Error booking rooms" });
+  }
 });
 
+// app.post('/TeacherbookRooms', teacher_authMiddleware , async (req, res) => {
+//     try {
+//         const selectedRooms = JSON.parse(req.body.selectedRooms);
 
-app.post('/TeacherbookRooms', teacher_authMiddleware , async (req, res) => {
-    try {
-        const selectedRooms = JSON.parse(req.body.selectedRooms);
+//         console.log(selectedRooms)
 
-        console.log(selectedRooms)
+//         // Fetch the current user
+//         const currentUser = await teacherModel.findOne({ email: req.user.email });
+//         if (!currentUser) {
+//             return res.status(404).json({ error: "User not found" });
+//         }
 
-        // Fetch the current user
-        const currentUser = await teacherModel.findOne({ email: req.user.email });
-        if (!currentUser) {
-            return res.status(404).json({ error: "User not found" });
+//         // Update all selected rooms with branch and batch details
+//         await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
+//             roomModel.findByIdAndUpdate(roomId, {
+//                 $set: {
+//                     "Booked_by.userId": currentUser._id,
+//                     "Booked_by.userEmail": currentUser.email,
+//                     "Booked_by.userType": "Teacher",
+//                     booking_status: "Booked",
+//                     branch: branch || "Not Specified",
+//                     batch: batch || "Not Specified"
+//                 }
+//             })
+//         ));
+
+//         res.redirect("Teacher_dashboard");
+//     } catch (error) {
+//         console.error("Error booking rooms:", error);
+//         res.status(500).json({ error: "Error booking rooms" });
+//     }
+// });
+
+// For Teacher booking
+app.post('/TeacherbookRooms', teacher_authMiddleware, async (req, res) => {
+  try {
+    const selectedRooms = JSON.parse(req.body.selectedRooms);
+    const currentUser = await teacherModel.findOne({ email: req.user.email });
+    
+    // Your existing booking logic
+    await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
+      roomModel.findByIdAndUpdate(roomId, {
+        $set: {
+          "Booked_by.userId": currentUser._id,
+          "Booked_by.userEmail": currentUser.email,
+          "Booked_by.userType": "Teacher",
+          booking_status: "Booked",
+          branch: branch || "Not Specified",
+          batch: batch || "Not Specified"
         }
+      })
+    ));
 
-        // Update all selected rooms with branch and batch details
-        await Promise.all(selectedRooms.map(({ roomId, branch, batch }) =>
-            roomModel.findByIdAndUpdate(roomId, {
-                $set: {
-                    "Booked_by.userId": currentUser._id,
-                    "Booked_by.userEmail": currentUser.email,
-                    "Booked_by.userType": "Teacher",
-                    booking_status: "Booked",
-                    branch: branch || "Not Specified",
-                    batch: batch || "Not Specified"
-                }
-            })
-        ));
-
-        res.redirect("Teacher_dashboard");
-    } catch (error) {
-        console.error("Error booking rooms:", error);
-        res.status(500).json({ error: "Error booking rooms" });
+    // Send email notifications
+    for (const { roomId, branch, batch } of selectedRooms) {
+      const room = await roomModel.findById(roomId).populate('floor_id');
+      const building = await buildingModel.findById(room.floor_id.building_id);
+      
+      const bookingDetails = {
+        roomNumber: room.room_Number,
+        from_time: new Date(), // Adjust based on your booking time
+        to_time: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours later
+        branch,
+        batch,
+        buildingName: building.building_name,
+        floorNumber: room.floor_id.floor_Number
+      };
+      
+      await sendBookingConfirmation(currentUser.email, bookingDetails, 'Teacher');
     }
-});
 
+    res.redirect("/Teacher_dashboard");
+  } catch (error) {
+    console.error("Error booking rooms:", error);
+    res.status(500).json({ error: "Error booking rooms" });
+  }
+});
 
 app.put("/freeRooms", async (req, res) => {
     try {
@@ -882,38 +1099,40 @@ app.get("/QRgenerateroom/:roomID", teacher_authMiddleware, async (req, res) => {
     }
 });
 
-app.post("/bookRoomFromQR", teacher_authMiddleware, async (req, res) => {
-    try {
-        const { roomID, from_time, to_time } = req.body;
-        const teacherId = req.user.id; // Extracted from token via middleware
 
-        // Validate ObjectId
-        if (!mongoose.Types.ObjectId.isValid(roomID) || !mongoose.Types.ObjectId.isValid(teacherId)) {
-            return res.status(400).json({ message: "Invalid room or teacher ID." });
-        }
 
-        const updatedRoom = await roomModel.findOneAndUpdate(
-            { _id: roomID },
-            {
-                assigned_teacher: teacherId,
-                booking_time: {
-                    from_time: new Date(from_time),
-                    to_time: new Date(to_time),
-                },
-            },
-            { new: true }
-        );
+// app.post("/bookRoomFromQR", teacher_authMiddleware, async (req, res) => {
+//     try {
+//         const { roomID, from_time, to_time } = req.body;
+//         const teacherId = req.user.id; // Extracted from token via middleware
 
-        if (!updatedRoom) {
-            return res.status(404).json({ message: "Room not found." });
-        }
+//         // Validate ObjectId
+//         if (!mongoose.Types.ObjectId.isValid(roomID) || !mongoose.Types.ObjectId.isValid(teacherId)) {
+//             return res.status(400).json({ message: "Invalid room or teacher ID." });
+//         }
 
-        res.json({ message: "✅ Room booked successfully via QR!", updatedRoom });
-    } catch (error) {
-        console.error("Error booking room via QR:", error);
-        res.status(500).json({ message: "Booking failed due to server error." });
-    }
-});
+//         const updatedRoom = await roomModel.findOneAndUpdate(
+//             { _id: roomID },
+//             {
+//                 assigned_teacher: teacherId,
+//                 booking_time: {
+//                     from_time: new Date(from_time),
+//                     to_time: new Date(to_time),
+//                 },
+//             },
+//             { new: true }
+//         );
+
+//         if (!updatedRoom) {
+//             return res.status(404).json({ message: "Room not found." });
+//         }
+
+//         res.json({ message: "✅ Room booked successfully via QR!", updatedRoom });
+//     } catch (error) {
+//         console.error("Error booking room via QR:", error);
+//         res.status(500).json({ message: "Booking failed due to server error." });
+//     }
+// });
 
 // app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) => {
 //     try {
@@ -945,6 +1164,45 @@ app.post("/bookRoomFromQR", teacher_authMiddleware, async (req, res) => {
 //         res.status(500).send("Server Error");
 //     }
 // });
+
+app.post("/bookRoomFromQR", teacher_authMiddleware, async (req, res) => {
+  try {
+    const { roomID, from_time, to_time } = req.body;
+    const teacherId = req.user.id;
+
+    const updatedRoom = await roomModel.findOneAndUpdate(
+      { _id: roomID },
+      {
+        assigned_teacher: teacherId,
+        booking_time: {
+          from_time: new Date(from_time),
+          to_time: new Date(to_time),
+        },
+      },
+      { new: true }
+    ).populate('floor_id');
+
+    // Send email notification
+    const teacher = await teacherModel.findById(teacherId);
+    const building = await buildingModel.findById(updatedRoom.floor_id.building_id);
+    
+    const bookingDetails = {
+      roomNumber: updatedRoom.room_Number,
+      from_time: new Date(from_time),
+      to_time: new Date(to_time),
+      buildingName: building.building_name,
+      floorNumber: updatedRoom.floor_id.floor_Number
+    };
+    
+    await sendBookingConfirmation(teacher.email, bookingDetails, 'Teacher');
+
+    res.json({ message: "✅ Room booked successfully via QR!", updatedRoom });
+  } catch (error) {
+    console.error("Error booking room via QR:", error);
+    res.status(500).json({ message: "Booking failed due to server error." });
+  }
+});
+
 
 app.get("/teacher_landing_dashboard", teacher_authMiddleware, async (req, res) => {
     try {
